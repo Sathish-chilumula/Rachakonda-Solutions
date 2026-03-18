@@ -81,11 +81,18 @@ export default function DashboardPage() {
     if (logs) setActivities(logs);
 
     if (agents) {
-      setSalesPerformance(agents.map(a => ({
-        ...a,
-        deals: Math.floor(Math.random() * 20), // Randomized for demo
-        progress: Math.floor(Math.random() * 100)
-      })));
+      // Calculate real performance based on leads (mocking the join for simplicity in this fetch)
+      const performance = await Promise.all(agents.map(async (agent) => {
+        const { count: agentLeads } = await supabase.from('leads').select('*', { count: 'exact', head: true }).eq('assigned_to', agent.id);
+        const { count: agentConverted } = await supabase.from('leads').select('*', { count: 'exact', head: true }).eq('assigned_to', agent.id).eq('status', 'converted');
+        
+        return {
+          ...agent,
+          deals: agentConverted || 0,
+          progress: agentLeads ? Math.round(((agentConverted || 0) / agentLeads) * 100) : 0
+        };
+      }));
+      setSalesPerformance(performance);
     }
 
     setLoading(false);

@@ -75,13 +75,21 @@ export default function Header() {
             </Link>
           </nav>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 text-slate-600"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className={`w-6 h-6 ${isScrolled || pathname !== '/' ? 'text-slate-900' : 'text-white'}`} />}
-          </button>
+          {/* Mobile Menu & Sign In Button */}
+          <div className="flex md:hidden items-center gap-2">
+            <Link
+              href="/crm/login"
+              className="px-4 py-2 bg-blue-900 text-white rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-blue-950/20"
+            >
+              Sign In
+            </Link>
+            <button
+              className="p-2 text-slate-600"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className={`w-6 h-6 ${isScrolled || pathname !== '/' ? 'text-slate-900' : 'text-white'}`} />}
+            </button>
+          </div>
         </div>
       </div>
 

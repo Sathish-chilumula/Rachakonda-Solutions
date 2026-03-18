@@ -122,31 +122,31 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
 
   const menuGroups = [
     {
-      label: 'Main',
+      label: 'Performance',
       items: [
         { name: 'Dashboard', href: '/crm', icon: LayoutDashboard },
+        { name: 'Strategic Reports', href: '/crm/reports', icon: BarChart3 },
       ]
     },
     {
-      label: 'Finance Module',
+      label: 'Business Units',
       items: [
-        { name: 'Finance Leads', href: '/crm/leads', icon: Briefcase },
-        ...(isStaff ? [{ name: 'Upload Excel', href: '/crm/upload', icon: UploadCloud }] : []),
+        { name: 'Finance Portal', href: '/crm/finance', icon: Briefcase },
+        { name: 'Education Portal', href: '/crm/education', icon: GraduationCap },
       ]
     },
     ...(isStaff ? [{
-      label: 'Education Module',
+      label: 'Operations',
       items: [
-        { name: 'Edu Enrollments', href: '/crm/leads?tab=education', icon: GraduationCap },
+        { name: 'Excel Sync', href: '/crm/upload', icon: UploadCloud },
+        { name: 'Audit Trail', href: '/crm/audit', icon: FileText },
       ]
     }] : []),
     ...(isAdmin ? [{
-      label: 'Administrative',
+      label: 'System Admin',
       items: [
-        { name: 'Sales Team', href: '/crm/users', icon: Users },
-        { name: 'Audit Logs', href: '/crm/audit', icon: FileText },
-        { name: 'Reports', href: '/crm/reports', icon: BarChart3 },
-        { name: 'Settings', href: '/crm/settings', icon: Settings },
+        { name: 'Team Directory', href: '/crm/users', icon: Users },
+        { name: 'Platform Settings', href: '/crm/settings', icon: Settings },
       ]
     }] : [])
   ];
