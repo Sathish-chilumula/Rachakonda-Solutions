@@ -69,15 +69,15 @@ CREATE POLICY "Admins can manage all leads"
 ON public.leads FOR ALL 
 USING ( (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin' );
 
-DROP POLICY IF EXISTS "Sales users view assigned leads" ON public.leads;
-CREATE POLICY "Sales users view assigned leads" 
+DROP POLICY IF EXISTS "Allow authenticated users to view all leads" ON public.leads;
+CREATE POLICY "Allow authenticated users to view all leads" 
 ON public.leads FOR SELECT 
-USING (assigned_to = auth.uid());
+USING (auth.uid() IS NOT NULL);
 
 DROP POLICY IF EXISTS "Sales users update assigned leads" ON public.leads;
 CREATE POLICY "Sales users update assigned leads" 
 ON public.leads FOR UPDATE 
-USING (assigned_to = auth.uid());
+USING (assigned_to = auth.uid() OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin');
 
 -- Allow public inserts for website forms
 DROP POLICY IF EXISTS "Enable insert for anonymous users" ON public.leads;

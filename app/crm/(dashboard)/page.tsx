@@ -36,9 +36,7 @@ export default function CRMDashboard() {
 
     let query = supabase.from('leads').select('*', { count: 'exact' });
 
-    if (userRole === 'sales') {
-      query = query.eq('assigned_to', session.user.id);
-    }
+    // Sales users can now see metrics for ALL finance leads
 
     const { data: leads, error } = await query.order('updated_at', { ascending: false });
 

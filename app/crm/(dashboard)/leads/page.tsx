@@ -48,9 +48,7 @@ function LeadsContent() {
     let query;
     if (activeTab === 'finance') {
       query = supabase.from('leads').select('*, profiles(email)');
-      if (userRole === 'sales') {
-        query = query.eq('assigned_to', session.user.id);
-      }
+      // Sales users can now see ALL finance leads (RLS also updated)
     } else {
       query = supabase.from('enrollments').select('*');
     }
