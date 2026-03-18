@@ -1,253 +1,217 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { UploadCloud, FileSpreadsheet, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { motion } from 'framer-motion';
+import { 
+  UploadCloud, 
+  FileSpreadsheet, 
+  CheckCircle2, 
+  AlertCircle, 
+  Database,
+  ArrowRight,
+  Info,
+  X,
+  FileText
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
-export default function UploadLeadsPage() {
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<{ success?: number, total?: number, error?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
-      setResults(null);
-      setProgress(0);
-    }
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setResults(null);
-      setProgress(0);
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setUploadStatus(null);
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        parseCSV(text);
+      };
+      reader.readAsText(selectedFile);
     }
   };
 
-  const processExcel = async () => {
-    if (!file) return;
+  const parseCSV = (text: string) => {
+    try {
+      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      if (lines.length < 2) throw new Error('CSV file is empty or missing headers.');
 
-    setUploading(true);
-    setProgress(10);
-    setResults(null);
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const data = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const entry: any = {};
+        headers.forEach((header, index) => {
+          if (header.includes('name')) entry.name = values[index];
+          else if (header.includes('phone') || header.includes('mobile')) entry.phone = values[index];
+          else if (header.includes('city')) entry.city = values[index];
+          else if (header.includes('loan') || header.includes('type')) entry.loan_type = values[index];
+          else if (header.includes('amount')) entry.amount = parseFloat(values[index]) || 0;
+        });
+        
+        if (!entry.name || !entry.phone) return null;
+        
+        return {
+          ...entry,
+          status: 'new',
+          source: 'excel',
+          priority: 'medium'
+        };
+      }).filter(Boolean);
+
+      setPreviewData(data);
+    } catch (err: any) {
+      setUploadStatus({ error: err.message });
+    }
+  };
+
+  const handleUpload = async () => {
+    if (previewData.length === 0) return;
+    setIsUploading(true);
+    setUploadStatus(null);
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const json = XLSX.utils.sheet_to_json(worksheet);
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.from('leads').insert(previewData).select();
 
-          setProgress(30);
+      if (error) throw error;
 
-          let successCount = 0;
-          let failedCount = 0;
-          let errors: string[] = [];
+      await supabase.from('audit_logs').insert({
+        user_id: session?.user.id,
+        action: `Imported ${previewData.length} leads via Excel`,
+        entity_type: 'lead',
+        entity_id: session?.user.id as any,
+        details: { count: previewData.length }
+      });
 
-          // Process in batches
-          const batchSize = 50;
-          for (let i = 0; i < json.length; i += batchSize) {
-            const batch = json.slice(i, i + batchSize);
-            
-            const formattedBatch = batch.map((row: any) => ({
-              name: row.Name || row.name || 'Unknown',
-              phone: String(row.Phone || row.phone || ''),
-              city: row.City || row.city || '',
-              loan_type: row['Loan Type'] || row.loan_type || row.LoanType || '',
-              amount: parseFloat(row.Amount || row.amount || 0) || null,
-              income: parseFloat(row.Income || row.income || 0) || null,
-              source: 'excel',
-              status: 'new'
-            })).filter(row => row.name !== 'Unknown' && row.phone); // Basic validation
-
-            if (formattedBatch.length > 0) {
-              const { error } = await supabase.from('leads').insert(formattedBatch);
-              
-              if (error) {
-                failedCount += formattedBatch.length;
-                errors.push(`Batch ${Math.floor(i/batchSize) + 1} failed: ${error.message}`);
-              } else {
-                successCount += formattedBatch.length;
-                failedCount += (batch.length - formattedBatch.length);
-                if (batch.length > formattedBatch.length) {
-                  errors.push(`Batch ${Math.floor(i/batchSize) + 1}: ${batch.length - formattedBatch.length} rows skipped (missing Name or Phone)`);
-                }
-              }
-            } else {
-              failedCount += batch.length;
-              errors.push(`Batch ${Math.floor(i/batchSize) + 1} skipped: Invalid data format (missing Name or Phone)`);
-            }
-
-            setProgress(30 + Math.floor((i / json.length) * 70));
-          }
-
-          setResults({ success: successCount, failed: failedCount, errors });
-          setProgress(100);
-        } catch (err: any) {
-          setResults({ success: 0, failed: 0, errors: [err.message || 'Failed to parse Excel file'] });
-        } finally {
-          setUploading(false);
-          setFile(null);
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-      };
-      reader.readAsBinaryString(file);
+      setUploadStatus({ success: data.length, total: previewData.length });
+      setPreviewData([]);
+      setFile(null);
     } catch (err: any) {
-      setResults({ success: 0, failed: 0, errors: [err.message || 'Failed to read file'] });
-      setUploading(false);
+      setUploadStatus({ error: err.message });
+    } finally {
+      setIsUploading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 px-4 sm:px-0">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Upload Leads</h1>
-        <p className="text-sm text-slate-500 mt-1">Import leads from an Excel or CSV file.</p>
+    <div className="space-y-10 max-w-[1400px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <UploadCloud className="w-8 h-8 text-blue-600" />
+            Bulk Data Engine
+          </h1>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">
+            High-speed CSV parser & lead migration tool
+          </p>
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-        <div className="mb-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-2">Expected Format</h2>
-          <p className="text-sm text-slate-600 mb-4">Your Excel file should contain the following columns:</p>
-          <div className="flex flex-wrap gap-2">
-            {['Name', 'Phone', 'City', 'Loan Type', 'Amount', 'Income'].map(col => (
-              <span key={col} className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-lg border border-slate-200">
-                {col}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div 
-          className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-colors ${
-            isDragging ? 'border-blue-500 bg-blue-50' :
-            file ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'
-          }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <input
-            type="file"
-            accept=".xlsx, .xls, .csv"
-            onChange={handleFileChange}
-            className="hidden"
-            ref={fileInputRef}
-            id="file-upload"
-          />
-          
+      <div className="grid grid-cols-1 gap-10">
+        <div className="xl:col-span-12">
           {!file ? (
-            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
-              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
-                <UploadCloud className="w-8 h-8" />
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white border-4 border-dashed border-slate-100 rounded-[3rem] p-16 flex flex-col items-center text-center group hover:border-blue-200 transition-all cursor-pointer bg-slate-50/20"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+              <div className="w-24 h-24 rounded-3xl bg-blue-50 flex items-center justify-center text-blue-600 mb-8 group-hover:scale-110 transition-transform shadow-2xl shadow-blue-500/10">
+                <FileSpreadsheet className="w-12 h-12" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">Click to upload or drag and drop</h3>
-              <p className="text-sm text-slate-500">XLSX, XLS, or CSV (max. 10MB)</p>
-            </label>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Drop CSV File Here</h2>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest max-w-[300px] mx-auto leading-relaxed italic">
+                Supported Schema: Name, Phone, City, Loan Type, Amount
+              </p>
+              <button className="mt-10 px-10 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 transition-all">
+                Select file
+              </button>
+            </motion.div>
           ) : (
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
-                <FileSpreadsheet className="w-8 h-8" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">{file.name}</h3>
-              <p className="text-sm text-slate-500 mb-6">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-              
-              <div className="flex gap-4">
-                <button
-                  onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50"
-                  disabled={uploading}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={processExcel}
-                  disabled={uploading}
-                  className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-70 flex items-center"
-                >
-                  {uploading ? (
-                    <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
-                  ) : (
-                    'Upload Leads'
-                  )}
-                </button>
+            <div className="space-y-8">
+              <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Data Preview</h2>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Found <span className="text-blue-600 font-black italic">{previewData.length}</span> candidates</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => { setFile(null); setPreviewData([]); }} className="p-3 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-red-600 transition-all shadow-sm">
+                      <X className="w-5 h-5" />
+                    </button>
+                    <button onClick={handleUpload} disabled={isUploading || previewData.length === 0} className="h-14 px-10 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 shadow-xl shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition-all">
+                      {isUploading ? 'Migrating...' : 'Start Lead Import'}
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto max-h-[500px]">
+                  <table className="w-full text-left">
+                    <thead className="sticky top-0 bg-[#FAFBFD] z-10 border-b border-slate-50">
+                      <tr>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Validated Name</th>
+                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contact Node</th>
+                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Financial Target</th>
+                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Volume</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Integrity Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {previewData.map((row, i) => (
+                        <tr key={i} className="group hover:bg-blue-50/30 transition-colors">
+                          <td className="px-8 py-4"><span className="text-sm font-bold text-slate-900">{row.name}</span></td>
+                          <td className="px-6 py-4"><div className="flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-slate-300" /><span className="text-xs font-semibold text-slate-600">{row.phone}</span></div></td>
+                          <td className="px-6 py-4"><span className="text-xs font-black text-blue-600 uppercase tracking-tight">{row.loan_type || 'N/A'}</span></td>
+                          <td className="px-6 py-4 text-sm font-bold text-slate-600">₹{row.amount?.toLocaleString() || '0'}</td>
+                          <td className="px-8 py-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Ready</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+
+              <div className="p-6 bg-slate-900 border border-slate-800 rounded-[2rem] flex items-center gap-5">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-blue-400">
+                  <Info className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Automation Warning</h3>
+                  <p className="text-xs font-medium text-slate-400 mt-0.5">Upon import, these leads will be tagged as <span className="text-blue-400">#Excel-Source</span>.</p>
+                </div>
               </div>
             </div>
           )}
-        </div>
 
-        {uploading && (
-          <div className="mt-8">
-            <div className="flex justify-between text-sm font-medium text-slate-700 mb-2">
-              <span>Uploading and processing...</span>
-              <span>{progress}%</span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-              <div 
-                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-          </div>
-        )}
-
-        {results && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-8 p-6 bg-slate-50 rounded-2xl border border-slate-200"
-          >
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Upload Results</h3>
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-white p-4 rounded-xl border border-emerald-100 flex items-center">
-                <CheckCircle className="w-8 h-8 text-emerald-500 mr-3" />
-                <div>
-                  <p className="text-sm text-slate-500 font-medium">Successfully Imported</p>
-                  <p className="text-2xl font-bold text-slate-900">{results.success}</p>
+          <AnimatePresence>
+            {uploadStatus && (
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className={cn("fixed bottom-10 right-10 p-8 rounded-[2rem] shadow-2xl flex items-center gap-6 z-50 border-4", uploadStatus.error ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100")}>
+                <div className={cn("w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-lg", uploadStatus.error ? "bg-red-600 text-white" : "bg-emerald-600 text-white")}>
+                  {uploadStatus.error ? <AlertCircle className="w-8 h-8" /> : <Database className="w-8 h-8" />}
                 </div>
-              </div>
-              <div className="bg-white p-4 rounded-xl border border-red-100 flex items-center">
-                <AlertCircle className="w-8 h-8 text-red-500 mr-3" />
                 <div>
-                  <p className="text-sm text-slate-500 font-medium">Failed / Skipped</p>
-                  <p className="text-2xl font-bold text-slate-900">{results.failed}</p>
+                  <h3 className={cn("text-lg font-black uppercase tracking-tight", uploadStatus.error ? "text-red-900" : "text-emerald-900")}>{uploadStatus.error ? 'Migration Collision' : 'Migration Success'}</h3>
+                  <p className={cn("text-sm font-bold opacity-70", uploadStatus.error ? "text-red-700" : "text-emerald-700")}>{uploadStatus.error || `Successfully integrated ${uploadStatus.success} leads.`}</p>
                 </div>
-              </div>
-            </div>
-
-            {results.errors.length > 0 && (
-              <div className="bg-red-50 p-4 rounded-xl border border-red-100">
-                <h4 className="text-sm font-bold text-red-800 mb-2">Error Log</h4>
-                <ul className="text-xs text-red-600 space-y-1 max-h-32 overflow-y-auto">
-                  {results.errors.map((err, i) => (
-                    <li key={i}>• {err}</li>
-                  ))}
-                </ul>
-              </div>
+                <button onClick={() => setUploadStatus(null)} className="ml-4 p-2 hover:bg-black/5 rounded-xl transition-colors"><X className="w-5 h-5 text-slate-400" /></button>
+              </motion.div>
             )}
-          </motion.div>
-        )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

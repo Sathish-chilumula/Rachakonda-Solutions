@@ -2,11 +2,31 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { motion } from 'framer-motion';
-import { UserPlus, Mail, Lock, Shield, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  UserPlus, 
+  Mail, 
+  Lock, 
+  Shield, 
+  Trash2, 
+  ShieldCheck, 
+  Users, 
+  UserCog,
+  Search,
+  Check,
+  AlertCircle,
+  Eye,
+  ShieldAlert
+} from 'lucide-react';
 import { format } from 'date-fns';
+import { useCRM } from '../context';
+
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(' ');
+}
 
 export default function UsersPage() {
+  const { profile: myProfile, setImpersonatedUser } = useCRM();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -17,12 +37,14 @@ export default function UsersPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [search, setSearch] = useState('');
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
+      .order('role', { ascending: true })
       .order('created_at', { ascending: false });
 
     if (!error && data) {
@@ -32,7 +54,6 @@ export default function UsersPage() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers();
   }, [fetchUsers]);
 
@@ -69,207 +90,275 @@ export default function UsersPage() {
     }
   };
 
+  const handleUpdateRole = async (userId: string, newRole: string) => {
+    if (userId === myProfile?.id) return; // Self-protection
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId);
+    
+    if (!error) {
+       fetchUsers();
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (userId === myProfile?.id) return;
+    if (!confirm('Are you absolutely sure? This will permanently delete the user account.')) return;
+
+    try {
+      const res = await fetch('/api/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Deletion failed');
+      }
+
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const filteredUsers = users.filter(u => 
+    (u.email?.toLowerCase() || '').includes(search.toLowerCase()) ||
+    (u.name?.toLowerCase() || '').includes(search.toLowerCase())
+  );
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto px-4 sm:px-0">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">User Management</h1>
-        <p className="text-sm text-slate-500 mt-1">Manage admin and sales team accounts.</p>
+    <div className="space-y-10 max-w-[1400px] mx-auto py-6">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <UserCog className="w-8 h-8 text-blue-600" />
+            Active Directory
+          </h1>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">
+            Governance & Access Control for <span className="text-slate-900">{users.length}</span> members
+          </p>
+        </div>
+
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+          <input 
+            type="text" 
+            placeholder="Search directory..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-semibold focus:ring-4 focus:ring-blue-500/5 outline-none transition-all shadow-sm"
+          />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Create User Form */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sticky top-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center">
-              <UserPlus className="w-5 h-5 mr-2 text-blue-500" />
-              Create New User
-            </h2>
-
-            {success && (
-              <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-sm">
-                User created successfully!
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
+        {/* Create User Section */}
+        <div className="xl:col-span-4">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm sticky top-28"
+          >
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                <UserPlus className="w-6 h-6" />
               </div>
-            )}
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">Onboard Member</h2>
+            </div>
 
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm">
-                {error}
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {success && (
+                <motion.div 
+                   className="mb-6 p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" /> Account created successfully
+                </motion.div>
+              )}
 
-            <form onSubmit={handleCreateUser} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-4 w-4 text-slate-400" />
-                  </div>
+              {error && (
+                <motion.div 
+                   className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+                >
+                  <AlertCircle className="w-4 h-4" /> {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <form onSubmit={handleCreateUser} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Member Email</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm outline-none"
-                    placeholder="user@example.com"
+                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 transition-all outline-none"
+                    placeholder="email@rachakonda.com"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-4 w-4 text-slate-400" />
-                  </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Access Token (Pass)</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                   <input
                     type="password"
                     required
                     minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm outline-none"
+                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 transition-all outline-none"
                     placeholder="••••••••"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Shield className="h-4 w-4 text-slate-400" />
-                  </div>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm outline-none appearance-none bg-white"
-                  >
-                    <option value="sales">Sales User</option>
-                    <option value="admin">Admin</option>
-                  </select>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Clearance Level</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['sales', 'manager', 'admin'].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRole(r)}
+                      className={cn(
+                        "py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
+                        role === r 
+                          ? "bg-slate-900 border-slate-900 text-white shadow-lg" 
+                          : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
+                      )}
+                    >
+                      {r}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={creating}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 mt-6"
+                className="w-full h-14 bg-blue-600 text-white rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 mt-4"
               >
-                {creating ? 'Creating...' : 'Create User'}
+                {creating ? 'Processing...' : 'Provision Member'}
               </button>
             </form>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Users List */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">All Users</h2>
-            </div>
-            
-            {/* Mobile View */}
-            <div className="block sm:hidden divide-y divide-slate-100">
-              {loading ? (
-                <div className="p-6 text-center text-slate-500">
-                  <div className="animate-pulse flex flex-col items-center">
-                    <div className="h-4 bg-slate-200 rounded w-24 mb-4"></div>
-                    <div className="h-4 bg-slate-200 rounded w-32"></div>
-                  </div>
+        {/* Users List Table Section */}
+        <div className="xl:col-span-8">
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden min-h-[600px]">
+            <div className="px-8 py-8 border-b border-slate-50 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">System Ledger</h2>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Permission mapping & real-time monitoring</p>
+              </div>
+              <div className="flex gap-2">
+                <div className="px-4 py-2 bg-blue-50 rounded-xl text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                  Secure
                 </div>
-              ) : users.length === 0 ? (
-                <div className="p-6 text-center text-slate-500">
-                  No users found.
-                </div>
-              ) : (
-                users.map((user) => (
-                  <div key={user.id} className="p-4 bg-white hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-900 font-bold shrink-0">
-                          {user.email?.charAt(0).toUpperCase() || 'U'}
-                        </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-slate-900">{user.email}</div>
-                          <div className="text-xs text-slate-500 font-mono">{user.id.substring(0, 8)}...</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-3">
-                      <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${
-                        user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {user.role}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {format(new Date(user.created_at), 'MMM d, yyyy')}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
+              </div>
             </div>
 
-            {/* Desktop View */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-slate-50 bg-slate-50/10">
+                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Principal</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clearance</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Governance</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-50">
                   {loading ? (
+                    [1,2,3,4].map(i => <tr key={i} className="animate-pulse px-8 py-10"><td colSpan={3} className="h-20 bg-slate-50/50" /></tr>)
+                  ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-6 py-12 text-center text-slate-500">
-                        <div className="animate-pulse flex flex-col items-center">
-                          <div className="h-4 bg-slate-200 rounded w-24 mb-4"></div>
-                          <div className="h-4 bg-slate-200 rounded w-32"></div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : users.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="px-6 py-12 text-center text-slate-500">
-                        No users found.
-                      </td>
+                      <td colSpan={3} className="px-8 py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No records found</td>
                     </tr>
                   ) : (
-                    users.map((user) => (
+                    filteredUsers.map((user, i) => (
                       <motion.tr 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
                         key={user.id} 
-                        className="hover:bg-slate-50 transition-colors"
+                        className="group hover:bg-slate-50/50 transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-900 font-bold shrink-0">
-                              {user.email?.charAt(0).toUpperCase() || 'U'}
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center font-black text-white text-sm group-hover:bg-blue-600 transition-all">
+                              {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
                             </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-slate-900">{user.email}</div>
-                              <div className="text-xs text-slate-500 font-mono">{user.id.substring(0, 8)}...</div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-900 leading-tight">{user.name || 'Anonymous Principal'}</p>
+                              <p className="text-xs font-semibold text-slate-400 lowercase truncate max-w-[180px]">{user.email}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${
-                            user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {user.role}
-                          </span>
+                        <td className="px-6 py-6">
+                          <div className="relative w-40 group/role">
+                            <select 
+                              value={user.role}
+                              onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                              disabled={user.id === myProfile?.id}
+                              className={cn(
+                                "w-full bg-white border border-slate-100 text-[10px] font-black uppercase tracking-widest rounded-xl py-2 pl-3 pr-8 appearance-none focus:ring-4 focus:ring-blue-500/5 transition-all outline-none cursor-pointer",
+                                user.role === 'admin' ? "text-amber-600 bg-amber-50/30 border-amber-100" : 
+                                user.role === 'manager' ? "text-purple-600 bg-purple-50/30 border-purple-100" :
+                                "text-blue-600 bg-blue-50/30 border-blue-100"
+                              )}
+                            >
+                              <option value="sales">Sales Agent</option>
+                              <option value="manager">Lead Manager</option>
+                              <option value="admin">Super Admin</option>
+                            </select>
+                            <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-30 pointer-events-none group-hover/role:opacity-60 transition-opacity" />
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                          {format(new Date(user.created_at), 'MMM d, yyyy')}
+                        <td className="px-8 py-6">
+                           <div className="flex items-center justify-end gap-3">
+                             <button 
+                               onClick={() => setImpersonatedUser(user)}
+                               disabled={user.id === myProfile?.id}
+                               className="h-10 px-4 rounded-xl bg-slate-50 text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 group/imp disabled:opacity-0"
+                             >
+                               <Eye className="w-3.5 h-3.5" />
+                               View As
+                             </button>
+                             
+                             <button 
+                               onClick={() => handleDeleteUser(user.id)}
+                               disabled={user.id === myProfile?.id}
+                               className="p-3 rounded-xl bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </button>
+                           </div>
                         </td>
                       </motion.tr>
                     ))
                   )}
                 </tbody>
               </table>
+            </div>
+            
+            <div className="p-8 bg-slate-50/50 border-t border-slate-50 mt-auto">
+               <div className="flex items-start gap-4">
+                 <ShieldAlert className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                 <div>
+                   <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Protocol Warning</p>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter leading-relaxed max-w-md">Deletions are permanent. Impersonation sessions bypass local RLS for auditing purposes. All administrative actions are recorded in the System Ledger.</p>
+                 </div>
+               </div>
             </div>
           </div>
         </div>
