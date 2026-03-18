@@ -60,6 +60,14 @@ export default function Header() {
               </Link>
             ))}
             <Link
+              href="/crm/login"
+              className={`text-sm font-medium transition-colors hover:text-amber-500 mr-2 ${
+                isScrolled || pathname !== '/' ? 'text-slate-600' : 'text-white/90'
+              }`}
+            >
+              Sign In
+            </Link>
+            <Link
               href="/contact"
               className="bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
             >
@@ -99,6 +107,13 @@ export default function Header() {
                   {link.name}
                 </Link>
               ))}
+              <Link
+                href="/crm/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-lg font-medium py-2 border-b border-slate-100 text-slate-700"
+              >
+                Sign In
+              </Link>
               <Link
                 href="/contact"
                 onClick={() => setIsMobileMenuOpen(false)}

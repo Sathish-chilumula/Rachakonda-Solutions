@@ -65,7 +65,7 @@ export default function LoanPage({ params }: { params: Promise<{ loanType: strin
             amount: data.amount,
             income: data.income,
             employment_type: data.employmentType,
-            source: 'website',
+            source: 'finance_website',
           },
         ]);
         if (error) throw error;

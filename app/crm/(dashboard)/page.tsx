@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Users, TrendingUp, CheckCircle, Clock, ArrowRight } from 'lucide-react';
+import { Users, CheckCircle, Clock, TrendingUp, BookOpen, UserPlus, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -17,6 +17,8 @@ export default function CRMDashboard() {
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
+  const [employeeStats, setEmployeeStats] = useState<any[]>([]);
+  const [eduMetrics, setEduMetrics] = useState({ total: 0, new: 0 });
 
   const fetchMetrics = useCallback(async () => {
     setLoading(true);
@@ -40,14 +42,43 @@ export default function CRMDashboard() {
 
     const { data: leads, error } = await query.order('updated_at', { ascending: false });
 
+    const { data: enrollments, error: eduError } = await supabase
+      .from('enrollments')
+      .select('*');
+
+    if (enrollments && !eduError) {
+      setEduMetrics({
+        total: enrollments.length,
+        new: enrollments.filter((e: any) => e.status === 'new').length
+      });
+    }
+
     if (leads && !error) {
       const total = leads.length;
-      const newLeads = leads.filter(l => l.status === 'new').length;
-      const contacted = leads.filter(l => l.status === 'contacted').length;
-      const converted = leads.filter(l => l.status === 'converted').length;
+      const newLeads = leads.filter((l: any) => l.status === 'new').length;
+      const contacted = leads.filter((l: any) => l.status === 'contacted').length;
+      const converted = leads.filter((l: any) => l.status === 'converted').length;
 
       setMetrics({ total, new: newLeads, contacted, converted });
       setRecentLeads(leads.slice(0, 5));
+
+      if (userRole === 'admin') {
+        const { data: profiles } = await supabase.from('profiles').select('id, email, name').eq('role', 'sales');
+        if (profiles && leads) {
+          const stats = profiles.map((p: any) => {
+            const userLeads = leads.filter((l: any) => l.assigned_to === p.id);
+            return {
+              id: p.id,
+              name: p.name || p.email.split('@')[0],
+              email: p.email,
+              total: userLeads.length,
+              converted: userLeads.filter((l: any) => l.status === 'converted').length,
+              pending: userLeads.filter((l: any) => l.status === 'new' || l.status === 'contacted').length
+            };
+          });
+          setEmployeeStats(stats);
+        }
+      }
     }
 
     setLoading(false);
@@ -72,10 +103,42 @@ export default function CRMDashboard() {
   }
 
   const statCards = [
-    { name: 'Total Leads', value: metrics.total, icon: Users, color: 'bg-blue-500', href: '/crm/leads' },
-    { name: 'New Leads', value: metrics.new, icon: Clock, color: 'bg-amber-500', href: '/crm/leads?status=new' },
-    { name: 'Contacted', value: metrics.contacted, icon: TrendingUp, color: 'bg-indigo-500', href: '/crm/leads?status=contacted' },
-    { name: 'Converted', value: metrics.converted, icon: CheckCircle, color: 'bg-emerald-500', href: '/crm/leads?status=converted' },
+    {
+      name: 'Total Finance Leads',
+      value: metrics.total.toString(),
+      icon: Users,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+      trend: '+12% from last month',
+      href: '/crm/leads'
+    },
+    {
+      name: 'Edu Enrollments',
+      value: eduMetrics.total.toString(),
+      icon: BookOpen,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+      trend: '+5% from last month',
+      href: '/crm/leads?tab=education'
+    },
+    {
+      name: 'New (Leads + Edu)',
+      value: (metrics.new + eduMetrics.new).toString(),
+      icon: UserPlus,
+      color: 'text-amber-600',
+      bg: 'bg-amber-50',
+      trend: 'Needs attention',
+      href: '/crm/leads'
+    },
+    {
+      name: 'Total Converted',
+      value: metrics.converted.toString(),
+      icon: CheckCircle,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+      trend: '85% success rate',
+      href: '/crm/leads?status=converted'
+    },
   ];
 
   return (
@@ -107,6 +170,65 @@ export default function CRMDashboard() {
           </Link>
         ))}
       </div>
+
+      {role === 'admin' && employeeStats.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+            <h2 className="text-lg font-bold text-slate-900">Employee Performance</h2>
+            <Link href="/crm/users" className="text-sm font-medium text-blue-600 hover:text-blue-800">
+              Manage Users
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Employee</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Leads</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Converted</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Conversion Rate</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-100">
+                {employeeStats.map((emp) => (
+                  <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-900 text-xs font-bold mr-3">
+                          {emp.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-slate-900">{emp.name}</div>
+                          <div className="text-xs text-slate-500">{emp.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-semibold">{emp.total}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-emerald-600 font-bold">{emp.converted}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{emp.pending}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium text-slate-900 mr-2">
+                          {emp.total > 0 ? Math.round((emp.converted / emp.total) * 100) : 0}%
+                        </span>
+                        <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className="bg-emerald-500 h-full rounded-full" 
+                            style={{ width: `${emp.total > 0 ? (emp.converted / emp.total) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">

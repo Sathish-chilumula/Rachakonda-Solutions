@@ -92,13 +92,15 @@ export default function CourseDetailPage({ params }: { params: Promise<{ courseI
     setIsSubmitting(true);
     try {
       if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        const { error } = await supabase.from('leads').insert([
+        const { error } = await supabase.from('enrollments').insert([
           {
             name: data.name,
             phone: data.phone,
-            loan_type: data.course, // Using loan_type to store course name
-            source: 'website',
-            remarks: `Email: ${data.email}`
+            email: data.email,
+            course_name: data.course,
+            category: course.category,
+            source: 'education_website',
+            status: 'new'
           },
         ]);
         if (error) throw error;

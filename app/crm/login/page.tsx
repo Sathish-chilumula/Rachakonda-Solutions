@@ -30,7 +30,7 @@ export default function CRMLogin() {
         if (profile?.role === 'admin') {
           router.push('/crm'); // Admin dashboard
         } else {
-          router.push('/crm'); // Sales dashboard (same route, different content)
+          router.push('/crm'); // Sales dashboard (same unified entry)
         }
       }
     };
