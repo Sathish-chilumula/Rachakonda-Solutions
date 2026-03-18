@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
@@ -15,11 +15,14 @@ const spaceGrotesk = Space_Grotesk({
   variable: '--font-display',
 });
 
+export const viewport: Viewport = {
+  themeColor: '#1E3A8A',
+};
+
 export const metadata: Metadata = {
   title: 'Rachakonda Solutions | Education & Finance',
   description: 'Empowering Education & Financial Growth. Premium business solutions.',
   manifest: '/manifest.json',
-  themeColor: '#1E3A8A',
 };
 
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';

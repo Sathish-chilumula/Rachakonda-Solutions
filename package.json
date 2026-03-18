@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:worker": "opennextjs-cloudflare",
-    "deploy": "npm run build:worker && wrangler deploy",
+    "build:worker": "npx opennextjs-cloudflare",
+    "deploy": "npm run build:worker && npx wrangler deploy",
     "start": "next start",
     "lint": "eslint .",
     "clean": "next clean"
