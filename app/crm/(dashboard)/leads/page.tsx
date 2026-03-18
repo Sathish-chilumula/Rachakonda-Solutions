@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Search, Filter, MoreVertical, Edit, UserPlus, FileDown } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';

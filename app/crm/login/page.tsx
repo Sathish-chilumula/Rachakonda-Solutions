@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, hasSupabaseConfig } from '@/lib/supabase';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 

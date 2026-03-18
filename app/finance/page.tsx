@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Landmark, Home, Car, Briefcase, GraduationCap, Coins, ArrowRight, ShieldCheck, Clock, Percent } from 'lucide-react';

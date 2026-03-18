@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { UserPlus, Mail, Lock, Shield, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 

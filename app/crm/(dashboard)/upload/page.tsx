@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { UploadCloud, FileSpreadsheet, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 export default function UploadLeadsPage() {
   const [file, setFile] = useState<File | null>(null);

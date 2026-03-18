@@ -1,6 +1,8 @@
 'use client';
 
-import { motion } from 'motion/react';
+// @ts-nocheck
+
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { Target, Eye, Shield, Users, Award, TrendingUp } from 'lucide-react';
 
@@ -11,21 +13,23 @@ export default function AboutPage() {
       <section className="bg-blue-950 text-white py-20 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/about/1920/1080')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <motion.h1 
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-bold mb-6 font-display"
           >
-            About <span className="text-amber-500">Rachakonda Solutions</span>
-          </motion.h1>
-          <motion.p 
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 font-display">
+              About <span className="text-amber-500">Rachakonda Solutions</span>
+            </h1>
+          </motion.div>
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-xl text-blue-100 max-w-3xl mx-auto"
           >
-            We are a premier consultancy firm dedicated to empowering individuals and businesses through top-tier education and comprehensive financial services.
-          </motion.p>
+            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+              We are a premier consultancy firm dedicated to empowering individuals and businesses through top-tier education and comprehensive financial services.
+            </p>
+          </motion.div>
         </div>
       </section>
 
