@@ -43,25 +43,31 @@ CREATE TABLE IF NOT EXISTS public.enrollments (
 
 -- 4. Enable Row Level Security (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.leads ENABLE ROW Level SECURITY;
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 
 -- 5. Create RLS Policies for PROFILES
-DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
-CREATE POLICY "Admins can view all profiles" 
-ON public.profiles FOR SELECT 
-USING (auth.jwt() ->> 'role' = 'service_role' OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+-- Allow public select so CRM can always load roles for session logic
+DROP POLICY IF EXISTS "Enable public select for profiles" ON public.profiles;
+CREATE POLICY "Enable public select for profiles" ON public.profiles FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
-CREATE POLICY "Users can view their own profile" 
-ON public.profiles FOR SELECT 
+-- Admins can manage all profiles
+DROP POLICY IF EXISTS "Admins can manage all profiles" ON public.profiles;
+CREATE POLICY "Admins can manage all profiles" 
+ON public.profiles FOR ALL 
+USING ( (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin' );
+
+-- Users can update their own profile
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+CREATE POLICY "Users can update their own profile" 
+ON public.profiles FOR UPDATE 
 USING (auth.uid() = id);
 
 -- 6. Create RLS Policies for LEADS (Finance)
 DROP POLICY IF EXISTS "Admins can manage all leads" ON public.leads;
 CREATE POLICY "Admins can manage all leads" 
 ON public.leads FOR ALL 
-USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+USING ( (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin' );
 
 DROP POLICY IF EXISTS "Sales users view assigned leads" ON public.leads;
 CREATE POLICY "Sales users view assigned leads" 
@@ -81,7 +87,7 @@ CREATE POLICY "Enable insert for anonymous users" ON public.leads FOR INSERT WIT
 DROP POLICY IF EXISTS "Admins can manage all enrollments" ON public.enrollments;
 CREATE POLICY "Admins can manage all enrollments" 
 ON public.enrollments FOR ALL 
-USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+USING ( (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin' );
 
 -- Allow public inserts for website forms
 DROP POLICY IF EXISTS "Enable insert for anonymous users" ON public.enrollments;
