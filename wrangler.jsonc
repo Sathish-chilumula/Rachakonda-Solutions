@@ -7,13 +7,6 @@
     "nodejs_compat"
   ],
   "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "rachakonda"
-    }
-  ]
+    "directory": ".open-next/assets"
+  }
 }
