@@ -8,8 +8,12 @@ export async function POST(req: Request) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json({ error: 'Server configuration missing. Add SUPABASE_SERVICE_ROLE_KEY to .env' }, { status: 500 });
+    if (!supabaseUrl) {
+      return NextResponse.json({ error: 'Server configuration missing: NEXT_PUBLIC_SUPABASE_URL is not defined in the environment.' }, { status: 500 });
+    }
+
+    if (!supabaseServiceKey) {
+      return NextResponse.json({ error: 'Server configuration missing: SUPABASE_SERVICE_ROLE_KEY is not defined. Please add it as a Secret in your Cloudflare Dashboard.' }, { status: 500 });
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {

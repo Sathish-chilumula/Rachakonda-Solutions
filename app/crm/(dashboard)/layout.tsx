@@ -11,8 +11,7 @@ import {
   LogOut, 
   Menu,
   X,
-  Briefcase,
-  Download
+  Briefcase
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -27,8 +26,6 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -39,27 +36,27 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
     }
 
     const fetchSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
       
-      if (!session) {
+      if (!currentSession) {
         router.push('/crm/login');
         return;
       }
 
-      setSession(session);
+      setSession(currentSession);
 
       // Fetch user profile to get role
-      const { data: profileData, error } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('id', currentSession.user.id)
         .single();
 
       if (profileData) {
         setProfile(profileData);
       } else {
         // Fallback if profile doesn't exist yet
-        setProfile({ role: 'sales', email: session.user.email });
+        setProfile({ role: 'sales', email: currentSession.user.email });
       }
 
       setLoading(false);
@@ -70,25 +67,18 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         router.push('/crm/login');
+      } else {
+        setSession(session);
       }
     });
 
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
     // Request Notification Permission
-    if ('Notification' in window && Notification.permission === 'default') {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
 
     return () => {
       subscription.unsubscribe();
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, [router]);
 
@@ -106,40 +96,20 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
           table: 'leads',
         },
         (payload) => {
-          if ('Notification' in window && Notification.permission === 'granted') {
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
             const isAdmin = profile.role === 'admin';
             const isSales = profile.role === 'sales';
 
             if (payload.eventType === 'INSERT' && isAdmin) {
-              if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                  type: 'SHOW_NOTIFICATION',
-                  title: 'New Lead Created',
-                  body: `${payload.new.name} just submitted a new lead.`,
-                  url: `/crm/leads/${payload.new.id}`
-                });
-              } else {
-                new Notification('New Lead Created', {
-                  body: `${payload.new.name} just submitted a new lead.`,
-                  icon: '/icon.svg',
-                });
-              }
+              new Notification('New Lead Created', {
+                body: `${payload.new.name} just submitted a new lead.`,
+              });
             }
 
             if (payload.eventType === 'UPDATE' && isSales && payload.new.assigned_to === profile.id && payload.old.assigned_to !== profile.id) {
-              if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                  type: 'SHOW_NOTIFICATION',
-                  title: 'New Lead Assigned',
-                  body: `You have been assigned a new lead: ${payload.new.name}.`,
-                  url: `/crm/leads/${payload.new.id}`
-                });
-              } else {
-                new Notification('New Lead Assigned', {
-                  body: `You have been assigned a new lead: ${payload.new.name}.`,
-                  icon: '/icon.svg',
-                });
-              }
+              new Notification('New Lead Assigned', {
+                body: `You have been assigned a new lead: ${payload.new.name}.`,
+              });
             }
           }
         }
@@ -150,16 +120,6 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [profile]);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstallable(false);
-    }
-    setDeferredPrompt(null);
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -272,15 +232,6 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex-1 flex justify-end">
             <div className="flex items-center gap-3">
-              {isInstallable && (
-                <button
-                  onClick={handleInstallClick}
-                  className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5 mr-1" />
-                  Install App
-                </button>
-              )}
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
                 {profile?.role} Account
               </span>
