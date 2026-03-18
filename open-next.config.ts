@@ -5,8 +5,6 @@ const config: OpenNextConfig = {
     override: {
       wrapper: "cloudflare-node",
       converter: "edge",
-      // @ts-ignore
-      incrementalCache: () => import("@opennextjs/cloudflare/incremental-cache"),
     },
   },
 };
