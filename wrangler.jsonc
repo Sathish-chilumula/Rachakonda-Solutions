@@ -6,7 +6,7 @@
     "nodejs_compat"
   ],
   "vars": {
-    "NEXT_PUBLIC_SUPABASE_URL": "",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": ""
+    "NEXT_PUBLIC_SUPABASE_URL": "https://kwidamtlofdadtxvedto.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3aWRhbXRsb2ZkYWR0eHZlZHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjgzNjksImV4cCI6MjA4OTMwNDM2OX0.cqYbZTE1-y4kaXpQwPhTA9SnM61LsoTJT5QLbZs9Kw4"
   }
 }
