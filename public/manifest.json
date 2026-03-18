@@ -1,0 +1,16 @@
+{
+  "name": "Rachakonda Solutions",
+  "short_name": "RS App",
+  "start_url": "/crm",
+  "display": "standalone",
+  "theme_color": "#1E3A8A",
+  "background_color": "#F9FAFB",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
