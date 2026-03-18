@@ -2,7 +2,12 @@ import type { OpenNextConfig } from "@opennextjs/cloudflare";
 
 const config: OpenNextConfig = {
   default: {
-    incrementalCache: true,
+    override: {
+      wrapper: "cloudflare-node",
+      converter: "edge",
+      // @ts-ignore
+      incrementalCache: () => import("@opennextjs/cloudflare/incremental-cache"),
+    },
   },
 };
 
