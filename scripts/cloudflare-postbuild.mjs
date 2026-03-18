@@ -26,4 +26,24 @@ if (fs.existsSync(assetsDir)) {
   console.log('⚠️ assets directory not found in .open-next');
 }
 
+// 3. Generate _routes.json for Cloudflare Pages
+// This ensures static assets are served directly by CF Pages and not routed to _worker.js (which 404s them)
+const routesJson = {
+  version: 1,
+  include: ["/*"],
+  exclude: [
+    "/_next/static/*",
+    "/favicon.ico",
+    "/manifest.json",
+    "/icon.svg",
+    "/sw.js"
+  ]
+};
+
+fs.writeFileSync(
+  path.join(openNextDir, '_routes.json'),
+  JSON.stringify(routesJson, null, 2)
+);
+console.log('✅ Generated _routes.json for proper static asset routing');
+
 console.log('--- Post-Build Script Complete ---');
