@@ -73,11 +73,19 @@ CREATE POLICY "Sales users update assigned leads"
 ON public.leads FOR UPDATE 
 USING (assigned_to = auth.uid());
 
+-- Allow public inserts for website forms
+DROP POLICY IF EXISTS "Enable insert for anonymous users" ON public.leads;
+CREATE POLICY "Enable insert for anonymous users" ON public.leads FOR INSERT WITH CHECK (true);
+
 -- 7. Create RLS Policies for ENROLLMENTS (Education)
 DROP POLICY IF EXISTS "Admins can manage all enrollments" ON public.enrollments;
 CREATE POLICY "Admins can manage all enrollments" 
 ON public.enrollments FOR ALL 
 USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- Allow public inserts for website forms
+DROP POLICY IF EXISTS "Enable insert for anonymous users" ON public.enrollments;
+CREATE POLICY "Enable insert for anonymous users" ON public.enrollments FOR INSERT WITH CHECK (true);
 
 -- 8. Trigger to create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
