@@ -20,7 +20,7 @@ function getAdminClient() {
 // CREATE user
 export async function POST(req: Request) {
   try {
-    const { email, password, role } = await req.json();
+    const { email, password, role, name, phone } = await req.json();
     const supabaseAdmin = getAdminClient();
     
     if (!supabaseAdmin) {
@@ -30,16 +30,20 @@ export async function POST(req: Request) {
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true
+      email_confirm: true,
+      user_metadata: { name, phone } // Store in metadata too, though we update profiles explicitly
     });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    // Wait a brief moment to ensure the auth trigger has fired
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({ role })
+      .update({ role, name, phone })
       .eq('id', data.user.id);
 
     if (profileError) {
@@ -52,10 +56,10 @@ export async function POST(req: Request) {
   }
 }
 
-// UPDATE user (password reset by admin, or update name/role)
+// UPDATE user (password reset by admin, or edit profile/email)
 export async function PATCH(req: Request) {
   try {
-    const { userId, newPassword, name, role } = await req.json();
+    const { userId, newPassword, email, name, phone, role } = await req.json();
     const supabaseAdmin = getAdminClient();
 
     if (!supabaseAdmin) {
@@ -66,24 +70,27 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    // Password reset
-    if (newPassword) {
-      if (newPassword.length < 6) {
-        return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+    // If updating email or password, use admin API
+    if (newPassword || email) {
+      const updatePayload: any = {};
+      if (newPassword) {
+        if (newPassword.length < 6) return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+        updatePayload.password = newPassword;
       }
+      if (email) updatePayload.email = email;
 
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        password: newPassword,
-      });
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, updatePayload);
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 400 });
       }
     }
 
-    // Profile updates (name, role)
+    // Profile updates (email, name, phone, role) -> email is kept in sync on profiles
     const profileUpdates: Record<string, string> = {};
+    if (email !== undefined) profileUpdates.email = email;
     if (name !== undefined) profileUpdates.name = name;
+    if (phone !== undefined) profileUpdates.phone = phone;
     if (role !== undefined) profileUpdates.role = role;
 
     if (Object.keys(profileUpdates).length > 0) {

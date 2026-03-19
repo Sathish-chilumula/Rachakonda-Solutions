@@ -11,7 +11,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
         <div className="absolute inset-0 bg-blue-950">
-          <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/business/1920/1080')] opacity-20 bg-cover bg-center mix-blend-overlay"></div>
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1556761175-5973b0f65e59?auto=format&fit=crop&q=80&w=1920')] opacity-20 bg-cover bg-center mix-blend-overlay"></div>
           <div className="absolute inset-0 bg-gradient-to-b from-blue-950/80 via-blue-950/90 to-slate-50"></div>
         </div>
         
@@ -121,7 +121,7 @@ export default function Home() {
               className="md:col-span-2 relative h-[400px] rounded-3xl overflow-hidden group shadow-lg"
             >
               <Image 
-                src="https://picsum.photos/seed/education/1200/800" 
+                src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=1200" 
                 alt="Premium Education" 
                 fill 
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -145,7 +145,7 @@ export default function Home() {
               className="relative h-[400px] rounded-3xl overflow-hidden group shadow-lg"
             >
               <Image 
-                src="https://picsum.photos/seed/finance/600/800" 
+                src="https://images.unsplash.com/photo-1579621970588-a35d0e7ab9b6?auto=format&fit=crop&q=80&w=600" 
                 alt="Financial Services" 
                 fill 
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -168,7 +168,7 @@ export default function Home() {
               className="relative h-[300px] rounded-3xl overflow-hidden group shadow-lg"
             >
               <Image 
-                src="https://picsum.photos/seed/consulting/600/600" 
+                src="https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=600" 
                 alt="Expert Consulting" 
                 fill 
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -191,7 +191,7 @@ export default function Home() {
               transition={{ delay: 0.2 }}
               className="md:col-span-2 relative h-[300px] rounded-3xl overflow-hidden group shadow-lg bg-slate-900 flex items-center"
             >
-              <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/network/1200/600')] opacity-30 bg-cover bg-center mix-blend-overlay transition-transform duration-700 group-hover:scale-105"></div>
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=1200')] opacity-30 bg-cover bg-center mix-blend-overlay transition-transform duration-700 group-hover:scale-105"></div>
               <div className="relative z-10 p-10 md:p-16 w-full flex flex-col md:flex-row items-center justify-between">
                 <div className="mb-6 md:mb-0">
                   <h3 className="text-3xl font-bold text-white mb-2">Ready to Transform?</h3>
@@ -256,7 +256,7 @@ export default function Home() {
               className="relative h-[400px] rounded-3xl overflow-hidden shadow-2xl"
             >
               <Image 
-                src="https://picsum.photos/seed/office/800/600" 
+                src="https://images.unsplash.com/photo-1573164574572-cb89e39749b4?auto=format&fit=crop&q=80&w=800" 
                 alt="Rachakonda Solutions Office" 
                 fill 
                 className="object-cover"

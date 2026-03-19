@@ -21,7 +21,7 @@ const courses = [
     category: 'computer',
     duration: '6 Months',
     mode: 'Online / Offline',
-    image: 'https://picsum.photos/seed/code/800/600',
+    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=800',
     description: 'Master modern web technologies including React, Node.js, and Next.js.',
   },
   {
@@ -30,7 +30,7 @@ const courses = [
     category: 'computer',
     duration: '8 Months',
     mode: 'Online',
-    image: 'https://picsum.photos/seed/data/800/600',
+    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800',
     description: 'Learn Python, Pandas, Scikit-learn, and build predictive models.',
   },
   {
@@ -39,7 +39,7 @@ const courses = [
     category: 'consultancy',
     duration: 'Flexible',
     mode: 'Offline',
-    image: 'https://picsum.photos/seed/university/800/600',
+    image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=800',
     description: 'Expert guidance for admissions to top universities worldwide.',
   },
   {
@@ -48,7 +48,7 @@ const courses = [
     category: 'crash',
     duration: '45 Days',
     mode: 'Online / Offline',
-    image: 'https://picsum.photos/seed/math/800/600',
+    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=800',
     description: 'Intensive preparation for board exams and competitive tests.',
   },
   {
@@ -57,7 +57,7 @@ const courses = [
     category: 'summer',
     duration: '4 Weeks',
     mode: 'Offline',
-    image: 'https://picsum.photos/seed/kids/800/600',
+    image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=800',
     description: 'Fun and interactive coding basics for children aged 8-14.',
   },
   {
@@ -66,7 +66,7 @@ const courses = [
     category: 'tutorial',
     duration: '3 Months',
     mode: 'Online',
-    image: 'https://picsum.photos/seed/speak/800/600',
+    image: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800',
     description: 'Improve your fluency, vocabulary, and confidence in English.',
   },
 ];
@@ -85,7 +85,7 @@ export default function EducationPortal() {
     <div className="min-h-screen bg-slate-50 pt-24 pb-20">
       {/* Hero Section */}
       <section className="bg-blue-950 text-white py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/library/1920/1080')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&q=80&w=1920')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}

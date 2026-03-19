@@ -34,18 +34,23 @@ export default function UsersPage() {
   // Create user form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [role, setRole] = useState('sales');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [search, setSearch] = useState('');
 
-  // Password reset modal
-  const [resetTarget, setResetTarget] = useState<any>(null);
+  // Edit/Password reset modal
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editEmail, setEditEmail] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [resetPassword, setResetPassword] = useState('');
-  const [resetting, setResetting] = useState(false);
-  const [resetError, setResetError] = useState<string | null>(null);
-  const [resetSuccess, setResetSuccess] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -83,7 +88,7 @@ export default function UsersPage() {
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ email, password, role, name, phone }),
       });
 
       const data = await res.json();
@@ -95,6 +100,8 @@ export default function UsersPage() {
       setSuccess(true);
       setEmail('');
       setPassword('');
+      setName('');
+      setPhone('');
       setRole('sales');
       fetchUsers();
       showToast('User created successfully', 'success');
@@ -144,40 +151,44 @@ export default function UsersPage() {
     }
   };
 
-  const handleResetPassword = async () => {
-    if (!resetTarget || !resetPassword) return;
-    if (resetPassword.length < 6) {
-      setResetError('Password must be at least 6 characters');
-      return;
-    }
+  const handleEditUser = async () => {
+    if (!editTarget) return;
 
-    setResetting(true);
-    setResetError(null);
+    setEditing(true);
+    setEditError(null);
 
     try {
+      const payload: any = { userId: editTarget.id };
+      if (editEmail && editEmail !== editTarget.email) payload.email = editEmail;
+      if (editName !== editTarget.name) payload.name = editName;
+      if (editPhone !== editTarget.phone) payload.phone = editPhone;
+      if (resetPassword) {
+        if (resetPassword.length < 6) throw new Error('Password must be at least 6 characters');
+        payload.newPassword = resetPassword;
+      }
+
       const res = await fetch('/api/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: resetTarget.id, newPassword: resetPassword }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to reset password');
-      }
+      if (!res.ok) throw new Error(data.error || 'Failed to update user');
 
-      setResetSuccess(true);
-      showToast(`Password reset for ${resetTarget.name || resetTarget.email}`, 'success');
+      setEditSuccess(true);
+      showToast(`User ${editName || editEmail} updated successfully`, 'success');
+      fetchUsers();
+      
       setTimeout(() => {
-        setResetTarget(null);
-        setResetPassword('');
-        setResetSuccess(false);
+        setEditTarget(null);
+        setEditSuccess(false);
       }, 2000);
     } catch (err: any) {
-      setResetError(err.message);
+      setEditError(err.message);
     } finally {
-      setResetting(false);
+      setEditing(false);
     }
   };
 
@@ -204,13 +215,13 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Password Reset Modal */}
-      {resetTarget && (
+      {/* Edit User Modal */}
+      {editTarget && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center">
-          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => { setResetTarget(null); setResetPassword(''); setResetError(null); setResetSuccess(false); }} />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 mx-4">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => { setEditTarget(null); setEditError(null); setEditSuccess(false); }} />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 mx-4 max-h-[90vh] overflow-y-auto">
             <button 
-              onClick={() => { setResetTarget(null); setResetPassword(''); setResetError(null); setResetSuccess(false); }}
+              onClick={() => { setEditTarget(null); setEditError(null); setEditSuccess(false); }}
               className="absolute top-4 right-4 p-2 rounded-xl hover:bg-slate-100 text-slate-400"
             >
               <X className="w-5 h-5" />
@@ -218,50 +229,53 @@ export default function UsersPage() {
 
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
-                <KeyRound className="w-6 h-6" />
+                <UserCog className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900">Reset Password</h3>
-                <p className="text-xs text-slate-500">{resetTarget.name || resetTarget.email}</p>
+                <h3 className="text-lg font-black text-slate-900">Edit Member</h3>
+                <p className="text-xs text-slate-500">Update details or reset password</p>
               </div>
             </div>
 
-            {resetSuccess ? (
+            {editSuccess ? (
               <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 text-sm font-bold flex items-center gap-2">
                 <Check className="w-5 h-5" />
-                Password reset successfully!
+                Updated successfully!
               </div>
             ) : (
               <>
-                {resetError && (
+                {editError && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-700 text-xs font-bold flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
-                    {resetError}
+                    {editError}
                   </div>
                 )}
 
-                <div className="space-y-2 mb-6">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">New Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                    <input
-                      type="password"
-                      value={resetPassword}
-                      onChange={(e) => setResetPassword(e.target.value)}
-                      placeholder="Min 6 characters"
-                      minLength={6}
-                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 outline-none transition-all"
-                    />
+                <div className="space-y-4 mb-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Full Name</label>
+                    <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Email <span className="text-amber-500 lowercase normal-case">(Login ID)</span></label>
+                    <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mobile Number</label>
+                    <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Reset Password (Optional)</label>
+                    <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="Leave blank to keep current" className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 outline-none transition-all" />
                   </div>
                 </div>
 
                 <button
-                  onClick={handleResetPassword}
-                  disabled={resetting || resetPassword.length < 6}
-                  className="w-full h-12 bg-amber-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-amber-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={handleEditUser}
+                  disabled={editing}
+                  className="w-full h-12 bg-blue-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <KeyRound className="w-4 h-4" />
-                  {resetting ? 'Resetting...' : 'Reset Password'}
+                  {editing ? 'Saving...' : 'Save Changes'}
                 </button>
               </>
             )}
@@ -317,6 +331,14 @@ export default function UsersPage() {
             )}
 
             <form onSubmit={handleCreateUser} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Full Name</label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="block w-full pl-5 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 transition-all outline-none" placeholder="First Last" required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Mobile Number</label>
+                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="block w-full pl-5 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 transition-all outline-none" placeholder="+91 90000 00000" />
+              </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Member Email</label>
                 <div className="relative group">
@@ -401,6 +423,7 @@ export default function UsersPage() {
                   <tr className="border-b border-slate-50 bg-slate-50/10">
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Principal</th>
                     <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clearance</th>
+                    <th className="px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Mobile</th>
                     <th className="px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Created</th>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Governance</th>
                   </tr>
@@ -445,6 +468,9 @@ export default function UsersPage() {
                           </div>
                         </td>
                         <td className="px-4 py-6">
+                          <p className="text-xs font-bold text-slate-600">{user.phone || '—'}</p>
+                        </td>
+                        <td className="px-4 py-6">
                           <div className="flex items-center gap-1.5 text-xs text-slate-400">
                             <Calendar className="w-3.5 h-3.5" />
                             {user.created_at ? format(new Date(user.created_at), 'MMM d, yyyy') : 'N/A'}
@@ -462,18 +488,26 @@ export default function UsersPage() {
                             </button>
 
                             <button 
-                              onClick={() => { setResetTarget(user); setResetPassword(''); setResetError(null); setResetSuccess(false); }}
+                              onClick={() => { 
+                                setEditTarget(user); 
+                                setEditEmail(user.email || ''); 
+                                setEditName(user.name || ''); 
+                                setEditPhone(user.phone || ''); 
+                                setResetPassword(''); 
+                                setEditError(null); 
+                                setEditSuccess(false); 
+                              }}
                               disabled={user.id === myProfile?.id}
                               className="h-9 px-3 rounded-xl bg-slate-50 text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-1.5 disabled:opacity-0"
                             >
-                              <KeyRound className="w-3.5 h-3.5" />
-                              Password
+                              <UserCog className="w-3.5 h-3.5" />
+                              Edit
                             </button>
                             
                             <button 
                               onClick={() => handleDeleteUser(user.id)}
                               disabled={user.id === myProfile?.id}
-                              className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
+                              className="p-2.5 rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all disabled:opacity-0"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

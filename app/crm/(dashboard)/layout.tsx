@@ -331,7 +331,7 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
 
             <div className="flex items-center gap-3">
               <div className="flex flex-col items-end hidden sm:flex">
-                <span className="text-xs font-bold text-slate-900">{profile?.email}</span>
+                <span className="text-xs font-bold text-slate-900">{profile?.name || profile?.email}</span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
                   {role} Access Level
                 </span>

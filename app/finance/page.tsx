@@ -66,7 +66,7 @@ export default function FinancePortal() {
     <div className="min-h-screen bg-slate-50 pt-24 pb-20">
       {/* === HERO SECTION — Conversion Focused === */}
       <section className="bg-blue-950 text-white py-16 md:py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/finance/1920/1080')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1621503673-9a39ca532d73?auto=format&fit=crop&q=80&w=1920')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
         {/* Glow effect */}
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"></div>
