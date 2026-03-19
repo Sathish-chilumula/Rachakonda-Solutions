@@ -14,6 +14,7 @@ import {
   Check,
   AlertCircle,
   Eye,
+  EyeOff,
   ShieldAlert,
   KeyRound,
   X,
@@ -34,6 +35,7 @@ export default function UsersPage() {
   // Create user form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('sales');
@@ -330,7 +332,7 @@ export default function UsersPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateUser} className="space-y-6">
+            <form onSubmit={handleCreateUser} className="space-y-6" autoComplete="off">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Full Name</label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="block w-full pl-5 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 transition-all outline-none" placeholder="First Last" required />
@@ -345,6 +347,9 @@ export default function UsersPage() {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                   <input
                     type="email"
+                    name="new-member-email"
+                    id="new-member-email"
+                    autoComplete="new-password"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -355,18 +360,31 @@ export default function UsersPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Access Token (Pass)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Access Token (Pass)</label>
+                  <button type="button" onClick={() => { setPassword(Math.random().toString(36).slice(-8)); setShowPassword(true); }} className="text-[9px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-800">Generate Random</button>
+                </div>
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
+                    name="new-member-password"
+                    id="new-member-password"
+                    autoComplete="new-password"
                     required
                     minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 transition-all outline-none"
-                    placeholder="••••••••"
+                    className="block w-full pl-12 pr-12 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 transition-all outline-none"
+                    placeholder="Type or generate one-time pass"
                   />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
 
@@ -497,8 +515,7 @@ export default function UsersPage() {
                                 setEditError(null); 
                                 setEditSuccess(false); 
                               }}
-                              disabled={user.id === myProfile?.id}
-                              className="h-9 px-3 rounded-xl bg-slate-50 text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-1.5 disabled:opacity-0"
+                              className="h-9 px-3 rounded-xl bg-slate-50 text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-1.5"
                             >
                               <UserCog className="w-3.5 h-3.5" />
                               Edit
@@ -507,7 +524,7 @@ export default function UsersPage() {
                             <button 
                               onClick={() => handleDeleteUser(user.id)}
                               disabled={user.id === myProfile?.id}
-                              className="p-2.5 rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all disabled:opacity-0"
+                              className="p-2.5 rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
