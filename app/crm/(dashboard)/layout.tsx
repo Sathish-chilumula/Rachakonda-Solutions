@@ -131,14 +131,15 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
     {
       label: 'Business Units',
       items: [
-        { name: 'Finance Portal', href: '/crm/finance', icon: Briefcase },
+        { name: 'Website Leads', href: '/crm/finance', icon: Briefcase },
         { name: 'Education Portal', href: '/crm/education', icon: GraduationCap },
       ]
     },
     {
-      label: 'Direct Entry',
+      label: 'Client Database',
       items: [
-        { name: 'Manual Lead', href: '/crm/leads/new', icon: FileText },
+        { name: 'All Clients', href: '/crm/clients', icon: Users },
+        { name: 'Manual Lead', href: '/crm/leads/new', icon: Eye },
       ]
     },
     ...(isStaff ? [{

@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import { GraduationCap, FileDown, Search, Filter, ChevronRight, PhoneCall, MessageCircle, AlertCircle, BookOpen, User } from 'lucide-react';
+import { GraduationCap, FileDown, Search, Filter, ChevronRight, PhoneCall, MessageCircle, AlertCircle, BookOpen, User, Trash2, Check } from 'lucide-react';
 import { useCRM } from '../context';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect, useCallback } from 'react';
@@ -19,6 +19,12 @@ function EducationContent() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -42,6 +48,17 @@ function EducationContent() {
       .eq('id', id);
     
     if (!error) fetchData();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this enrollment?')) return;
+    const { error } = await supabase.from('enrollments').delete().eq('id', id);
+    if (!error) {
+      showToast('Enrollment deleted', 'success');
+      fetchData();
+    } else {
+      showToast('Error deleting enrollment', 'error');
+    }
   };
 
   const filteredData = data.filter((item: any) => {
@@ -110,6 +127,14 @@ function EducationContent() {
           )
         })}
       </section>
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[100] ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'} text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in slide-in-from-right duration-300`}>
+          {toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+          <span className="text-sm font-bold tracking-wide">{toast.message}</span>
+        </div>
+      )}
 
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/20">
@@ -224,6 +249,12 @@ function EducationContent() {
                          <Link href={`/crm/enrollments/${item.id}`} className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
                            <ChevronRight className="w-4 h-4" />
                          </Link>
+                         <button 
+                           onClick={() => handleDelete(item.id)}
+                           className="p-2.5 rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                         >
+                           <Trash2 className="w-4 h-4" />
+                         </button>
                        </div>
                     </td>
                   </tr>

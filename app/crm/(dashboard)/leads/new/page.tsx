@@ -65,7 +65,8 @@ export default function ManualLeadPage() {
           completed_emi: parseFloat(formData.completed_emi) || 0,
           assigned_to: profile?.id,
           status: 'new',
-          priority: 'hot'
+          priority: 'hot',
+          source: 'manual'
         }
       ]);
 
@@ -73,7 +74,7 @@ export default function ManualLeadPage() {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/crm/finance');
+        router.push('/crm/clients');
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Error creating lead');

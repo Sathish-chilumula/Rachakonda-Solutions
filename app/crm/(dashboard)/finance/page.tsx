@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import { Briefcase, FileDown, Hash, Search, Filter, ChevronRight, UserPlus, PhoneCall, MessageCircle, AlertCircle, MapPin, Phone, Check, X, Eye, Target, Send } from 'lucide-react';
+import { Briefcase, FileDown, Hash, Search, Filter, ChevronRight, UserPlus, PhoneCall, MessageCircle, AlertCircle, MapPin, Phone, Check, X, Eye, Target, Send, Trash2 } from 'lucide-react';
 import { useCRM } from '../context';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect, useCallback } from 'react';
@@ -45,7 +45,7 @@ function FinanceContent() {
       .eq('role', 'sales');
     if (usersData) setSalesUsers(usersData);
 
-    let query = supabase.from('leads').select('*, profiles(email, name)');
+    let query = supabase.from('leads').select('*, profiles(email, name)').eq('source', 'website');
 
     const { data: results, error } = await query.order('created_at', { ascending: false });
     if (results && !error) setData(results);
@@ -55,6 +55,18 @@ function FinanceContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this lead?')) return;
+    const { error } = await supabase.from('leads').delete().eq('id', id);
+    if (!error) {
+      showToast('Lead deleted', 'success');
+      fetchData();
+      if (selectedLead?.id === id) setSelectedLead(null);
+    } else {
+      showToast('Error deleting lead', 'error');
+    }
+  };
 
   const handleAssign = async (leadId: string, userId: string) => {
     const { error } = await supabase
@@ -411,6 +423,12 @@ function FinanceContent() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        <button 
+                          onClick={() => handleDelete(item.id)}
+                          className="p-2 rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all outline-none"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -546,6 +564,13 @@ function FinanceContent() {
                   >
                     <Send className="w-4 h-4" />
                     Email
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(selectedLead.id)}
+                    className="h-12 px-5 rounded-2xl bg-white border border-red-100 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
                   </button>
                 </div>
 
