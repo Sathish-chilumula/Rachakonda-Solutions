@@ -31,6 +31,7 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState({
     totalLeads: 0,
     convertedLeads: 0,
+    pendingLeads: 0,
     totalEnrollments: 0,
     conversionRate: 0,
     activeAgents: 0
@@ -58,6 +59,12 @@ export default function DashboardPage() {
     }
     const { count: convertedLeadsCount } = await convertedLeadsQuery;
 
+    let pendingLeadsQuery = supabase.from('leads').select('*', { count: 'exact', head: true }).in('status', ['new', 'contacted', 'interested']);
+    if (!isAdmin) {
+      pendingLeadsQuery = pendingLeadsQuery.eq('assigned_to', targetUserId);
+    }
+    const { count: pendingLeadsCount } = await pendingLeadsQuery;
+
     const { count: totalEnrollmentsCount } = await supabase.from('enrollments').select('*', { count: 'exact', head: true });
 
     // 3. Fetch Sales Profiles for performance table
@@ -73,6 +80,7 @@ export default function DashboardPage() {
     setMetrics({
       totalLeads: totalLeadsCount || 0,
       convertedLeads: convertedLeadsCount || 0,
+      pendingLeads: pendingLeadsCount || 0,
       totalEnrollments: totalEnrollmentsCount || 0,
       conversionRate: totalLeadsCount ? Math.round(((convertedLeadsCount || 0) / totalLeadsCount) * 100) : 0,
       activeAgents: agents?.length || 0
@@ -103,10 +111,10 @@ export default function DashboardPage() {
   }, [fetchDashboardData]);
 
   const cards = [
-    { label: 'Total Leads', value: metrics.totalLeads, trend: '+12%', icon: Briefcase, color: 'blue' },
-    { label: 'Enrollments', value: metrics.totalEnrollments, trend: '+5%', icon: GraduationCap, color: 'purple' },
-    { label: 'Conversion', value: `${metrics.conversionRate}%`, trend: '+2%', icon: CheckCircle2, color: 'emerald' },
-    { label: 'Active Team', value: metrics.activeAgents, trend: 'Stable', icon: Users, color: 'amber' },
+    { label: 'Total Leads', value: metrics.totalLeads, sub: `${metrics.convertedLeads} converted`, icon: Briefcase, color: 'blue', href: '/crm/finance' },
+    { label: 'Pending', value: metrics.pendingLeads, sub: 'new + contacted', icon: Clock, color: 'amber', href: '/crm/finance' },
+    { label: 'Enrollments', value: metrics.totalEnrollments, sub: 'education portal', icon: GraduationCap, color: 'purple', href: '/crm/education' },
+    { label: 'Conversion', value: `${metrics.conversionRate}%`, sub: `${metrics.activeAgents} agents`, icon: CheckCircle2, color: 'emerald', href: '/crm/reports' },
   ];
 
   if (loading) {
@@ -151,11 +159,9 @@ export default function DashboardPage() {
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cards.map((card, i) => (
-          <motion.div
+          <Link
             key={card.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            href={card.href}
             className="group p-6 bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-slate-200 transition-all cursor-pointer relative overflow-hidden"
           >
             <div className={cn(
@@ -174,18 +180,15 @@ export default function DashboardPage() {
               )}>
                 <card.icon className="w-6 h-6" />
               </div>
-              <span className={cn(
-                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest",
-                card.trend.includes('+') ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-500"
-              )}>
-                {card.trend}
+              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-50 text-slate-500 uppercase tracking-widest">
+                {card.sub}
               </span>
             </div>
             <div className="relative z-10">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{card.label}</p>
               <h3 className="text-3xl font-black text-slate-900 tracking-tight">{card.value}</h3>
             </div>
-          </motion.div>
+          </Link>
         ))}
       </div>
 

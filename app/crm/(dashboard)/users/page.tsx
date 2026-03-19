@@ -2,21 +2,22 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserPlus, 
   Mail, 
   Lock, 
   Shield, 
   Trash2, 
-  ShieldCheck, 
   Users, 
   UserCog,
   Search,
   Check,
   AlertCircle,
   Eye,
-  ShieldAlert
+  ShieldAlert,
+  KeyRound,
+  X,
+  Calendar
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCRM } from '../context';
@@ -30,7 +31,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Form state
+  // Create user form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('sales');
@@ -38,6 +39,21 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Password reset modal
+  const [resetTarget, setResetTarget] = useState<any>(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState(false);
+
+  // Toast
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -81,17 +97,18 @@ export default function UsersPage() {
       setPassword('');
       setRole('sales');
       fetchUsers();
-      
+      showToast('User created successfully', 'success');
       setTimeout(() => setSuccess(false), 5000);
     } catch (err: any) {
       setError(err.message);
+      showToast(err.message, 'error');
     } finally {
       setCreating(false);
     }
   };
 
   const handleUpdateRole = async (userId: string, newRole: string) => {
-    if (userId === myProfile?.id) return; // Self-protection
+    if (userId === myProfile?.id) return;
 
     const { error } = await supabase
       .from('profiles')
@@ -99,13 +116,14 @@ export default function UsersPage() {
       .eq('id', userId);
     
     if (!error) {
-       fetchUsers();
+      fetchUsers();
+      showToast('Role updated', 'success');
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
     if (userId === myProfile?.id) return;
-    if (!confirm('Are you absolutely sure? This will permanently delete the user account.')) return;
+    if (!confirm('Are you sure? This will permanently delete the user account.')) return;
 
     try {
       const res = await fetch('/api/users', {
@@ -120,8 +138,46 @@ export default function UsersPage() {
       }
 
       fetchUsers();
+      showToast('User deleted', 'success');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetTarget || !resetPassword) return;
+    if (resetPassword.length < 6) {
+      setResetError('Password must be at least 6 characters');
+      return;
+    }
+
+    setResetting(true);
+    setResetError(null);
+
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: resetTarget.id, newPassword: resetPassword }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to reset password');
+      }
+
+      setResetSuccess(true);
+      showToast(`Password reset for ${resetTarget.name || resetTarget.email}`, 'success');
+      setTimeout(() => {
+        setResetTarget(null);
+        setResetPassword('');
+        setResetSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      setResetError(err.message);
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -130,9 +186,90 @@ export default function UsersPage() {
     (u.name?.toLowerCase() || '').includes(search.toLowerCase())
   );
 
+  const getRoleColor = (r: string) => {
+    switch(r) {
+      case 'admin': return 'text-amber-600 bg-amber-50/30 border-amber-100';
+      case 'manager': return 'text-purple-600 bg-purple-50/30 border-purple-100';
+      default: return 'text-blue-600 bg-blue-50/30 border-blue-100';
+    }
+  };
+
   return (
     <div className="space-y-10 max-w-[1400px] mx-auto py-6">
-      {/* Header Section */}
+      {/* Global Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[100] ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'} text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-4`}>
+          {toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+          <span className="font-medium text-sm">{toast.message}</span>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {resetTarget && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => { setResetTarget(null); setResetPassword(''); setResetError(null); setResetSuccess(false); }} />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 mx-4">
+            <button 
+              onClick={() => { setResetTarget(null); setResetPassword(''); setResetError(null); setResetSuccess(false); }}
+              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-slate-100 text-slate-400"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Reset Password</h3>
+                <p className="text-xs text-slate-500">{resetTarget.name || resetTarget.email}</p>
+              </div>
+            </div>
+
+            {resetSuccess ? (
+              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 text-sm font-bold flex items-center gap-2">
+                <Check className="w-5 h-5" />
+                Password reset successfully!
+              </div>
+            ) : (
+              <>
+                {resetError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-700 text-xs font-bold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    {resetError}
+                  </div>
+                )}
+
+                <div className="space-y-2 mb-6">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">New Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                    <input
+                      type="password"
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      minLength={6}
+                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/5 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleResetPassword}
+                  disabled={resetting || resetPassword.length < 6}
+                  className="w-full h-12 bg-amber-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-amber-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  {resetting ? 'Resetting...' : 'Reset Password'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
@@ -157,13 +294,9 @@ export default function UsersPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-        {/* Create User Section */}
+        {/* Create User Panel */}
         <div className="xl:col-span-4">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm sticky top-28"
-          >
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm sticky top-28">
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
                 <UserPlus className="w-6 h-6" />
@@ -171,23 +304,17 @@ export default function UsersPage() {
               <h2 className="text-xl font-black text-slate-900 tracking-tight">Onboard Member</h2>
             </div>
 
-            <AnimatePresence mode="wait">
-              {success && (
-                <motion.div 
-                   className="mb-6 p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center gap-2"
-                >
-                  <Check className="w-4 h-4" /> Account created successfully
-                </motion.div>
-              )}
+            {success && (
+              <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                <Check className="w-4 h-4" /> Account created successfully
+              </div>
+            )}
 
-              {error && (
-                <motion.div 
-                   className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center gap-2"
-                >
-                  <AlertCircle className="w-4 h-4" /> {error}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" /> {error}
+              </div>
+            )}
 
             <form onSubmit={handleCreateUser} className="space-y-6">
               <div className="space-y-2">
@@ -250,10 +377,10 @@ export default function UsersPage() {
                 {creating ? 'Processing...' : 'Provision Member'}
               </button>
             </form>
-          </motion.div>
+          </div>
         </div>
 
-        {/* Users List Table Section */}
+        {/* Users Table */}
         <div className="xl:col-span-8">
           <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden min-h-[600px]">
             <div className="px-8 py-8 border-b border-slate-50 flex items-center justify-between">
@@ -263,7 +390,7 @@ export default function UsersPage() {
               </div>
               <div className="flex gap-2">
                 <div className="px-4 py-2 bg-blue-50 rounded-xl text-[10px] font-black text-blue-600 uppercase tracking-widest">
-                  Secure
+                  {users.length} Users
                 </div>
               </div>
             </div>
@@ -274,25 +401,20 @@ export default function UsersPage() {
                   <tr className="border-b border-slate-50 bg-slate-50/10">
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Principal</th>
                     <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clearance</th>
+                    <th className="px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Created</th>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Governance</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {loading ? (
-                    [1,2,3,4].map(i => <tr key={i} className="animate-pulse px-8 py-10"><td colSpan={3} className="h-20 bg-slate-50/50" /></tr>)
+                    [1,2,3,4].map(i => <tr key={i} className="animate-pulse"><td colSpan={4} className="h-20 bg-slate-50/50" /></tr>)
                   ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-8 py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No records found</td>
+                      <td colSpan={4} className="px-8 py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No records found</td>
                     </tr>
                   ) : (
-                    filteredUsers.map((user, i) => (
-                      <motion.tr 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                        key={user.id} 
-                        className="group hover:bg-slate-50/50 transition-colors"
-                      >
+                    filteredUsers.map((user) => (
+                      <tr key={user.id} className="group hover:bg-slate-50/50 transition-colors">
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center font-black text-white text-sm group-hover:bg-blue-600 transition-all">
@@ -305,46 +427,59 @@ export default function UsersPage() {
                           </div>
                         </td>
                         <td className="px-6 py-6">
-                          <div className="relative w-40 group/role">
+                          <div className="relative w-40">
                             <select 
                               value={user.role}
                               onChange={(e) => handleUpdateRole(user.id, e.target.value)}
                               disabled={user.id === myProfile?.id}
                               className={cn(
-                                "w-full bg-white border border-slate-100 text-[10px] font-black uppercase tracking-widest rounded-xl py-2 pl-3 pr-8 appearance-none focus:ring-4 focus:ring-blue-500/5 transition-all outline-none cursor-pointer",
-                                user.role === 'admin' ? "text-amber-600 bg-amber-50/30 border-amber-100" : 
-                                user.role === 'manager' ? "text-purple-600 bg-purple-50/30 border-purple-100" :
-                                "text-blue-600 bg-blue-50/30 border-blue-100"
+                                "w-full bg-white border text-[10px] font-black uppercase tracking-widest rounded-xl py-2 pl-3 pr-8 appearance-none focus:ring-4 focus:ring-blue-500/5 transition-all outline-none cursor-pointer",
+                                getRoleColor(user.role)
                               )}
                             >
                               <option value="sales">Sales Agent</option>
                               <option value="manager">Lead Manager</option>
                               <option value="admin">Super Admin</option>
                             </select>
-                            <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-30 pointer-events-none group-hover/role:opacity-60 transition-opacity" />
+                            <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-30 pointer-events-none" />
+                          </div>
+                        </td>
+                        <td className="px-4 py-6">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {user.created_at ? format(new Date(user.created_at), 'MMM d, yyyy') : 'N/A'}
                           </div>
                         </td>
                         <td className="px-8 py-6">
-                           <div className="flex items-center justify-end gap-3">
-                             <button 
-                               onClick={() => setImpersonatedUser(user)}
-                               disabled={user.id === myProfile?.id}
-                               className="h-10 px-4 rounded-xl bg-slate-50 text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 group/imp disabled:opacity-0"
-                             >
-                               <Eye className="w-3.5 h-3.5" />
-                               View As
-                             </button>
-                             
-                             <button 
-                               onClick={() => handleDeleteUser(user.id)}
-                               disabled={user.id === myProfile?.id}
-                               className="p-3 rounded-xl bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
-                             >
-                               <Trash2 className="w-4 h-4" />
-                             </button>
-                           </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => setImpersonatedUser(user)}
+                              disabled={user.id === myProfile?.id}
+                              className="h-9 px-3 rounded-xl bg-slate-50 text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1.5 disabled:opacity-0"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              View
+                            </button>
+
+                            <button 
+                              onClick={() => { setResetTarget(user); setResetPassword(''); setResetError(null); setResetSuccess(false); }}
+                              disabled={user.id === myProfile?.id}
+                              className="h-9 px-3 rounded-xl bg-slate-50 text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-1.5 disabled:opacity-0"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                              Password
+                            </button>
+                            
+                            <button 
+                              onClick={() => handleDeleteUser(user.id)}
+                              disabled={user.id === myProfile?.id}
+                              className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
-                      </motion.tr>
+                      </tr>
                     ))
                   )}
                 </tbody>
@@ -352,13 +487,13 @@ export default function UsersPage() {
             </div>
             
             <div className="p-8 bg-slate-50/50 border-t border-slate-50 mt-auto">
-               <div className="flex items-start gap-4">
-                 <ShieldAlert className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                 <div>
-                   <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Protocol Warning</p>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter leading-relaxed max-w-md">Deletions are permanent. Impersonation sessions bypass local RLS for auditing purposes. All administrative actions are recorded in the System Ledger.</p>
-                 </div>
-               </div>
+              <div className="flex items-start gap-4">
+                <ShieldAlert className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Protocol Warning</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter leading-relaxed max-w-md">Deletions are permanent. Password resets are immediate and the user will need the new password to log in.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -3,9 +3,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Save, User, Phone, MapPin, Briefcase, DollarSign, Calendar, Clock, PhoneCall, AlertCircle, StickyNote, Tag } from 'lucide-react';
+import { ArrowLeft, Save, User, Phone, MapPin, Briefcase, DollarSign, Calendar, Clock, PhoneCall, AlertCircle, StickyNote, Tag, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+
+const WA_TEMPLATES = [
+  { id: 'followup', label: 'Loan Follow-up', message: (name: string, loan: string) => `Hi ${name}, regarding your ${loan?.replace(/-/g, ' ')} enquiry at Rachakonda Solutions — our team is ready to assist you.` },
+  { id: 'documents', label: 'Document Request', message: (name: string, loan: string) => `Hi ${name}, to process your ${loan?.replace(/-/g, ' ')} application, we need: Aadhaar, PAN, Income Proof, Bank Statements (6 months).` },
+  { id: 'approval', label: 'Approval Message', message: (name: string, loan: string) => `Congratulations ${name}! Your ${loan?.replace(/-/g, ' ')} has been approved by Rachakonda Solutions!` },
+  { id: 'rejection', label: 'Rejection Notice', message: (name: string, loan: string) => `Hi ${name}, we're unable to proceed with your ${loan?.replace(/-/g, ' ')} at this time. Please contact us for alternatives.` },
+];
 
 export default function LeadDetailPage() {
   const { id } = useParams();
@@ -13,6 +20,7 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [waMenuOpen, setWaMenuOpen] = useState(false);
   
   // Form state
   const [status, setStatus] = useState('');
@@ -22,6 +30,17 @@ export default function LeadDetailPage() {
 
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+
+  const openWhatsApp = (templateId: string) => {
+    if (!lead) return;
+    const template = WA_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    const cleanPhone = (lead.phone || '').replace(/[^0-9]/g, '');
+    const fullPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+    const msg = encodeURIComponent(template.message(lead.name, lead.loan_type));
+    window.open(`https://wa.me/${fullPhone}?text=${msg}`, '_blank');
+    setWaMenuOpen(false);
+  };
 
   const fetchLead = useCallback(async () => {
     setLoading(true);
@@ -127,13 +146,41 @@ export default function LeadDetailPage() {
         </div>
         <div className="flex items-center gap-3">
           {lead.phone && (
-            <a
-              href={`tel:${lead.phone}`}
-              className="inline-flex items-center px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
-            >
-              <PhoneCall className="w-4 h-4 mr-2" />
-              Call Now
-            </a>
+            <>
+              <a
+                href={`tel:${lead.phone}`}
+                className="inline-flex items-center px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+              >
+                <PhoneCall className="w-4 h-4 mr-2" />
+                Call Now
+              </a>
+              <div className="relative">
+                <button
+                  onClick={() => setWaMenuOpen(!waMenuOpen)}
+                  className="inline-flex items-center px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  WhatsApp
+                </button>
+                {waMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setWaMenuOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-slate-100 w-56 py-2">
+                      <p className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Send Template</p>
+                      {WA_TEMPLATES.map((tpl) => (
+                        <button
+                          key={tpl.id}
+                          onClick={() => openWhatsApp(tpl.id)}
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                        >
+                          {tpl.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
           )}
           <button
             onClick={handleSave}
