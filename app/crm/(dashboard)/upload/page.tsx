@@ -56,8 +56,16 @@ export default function UploadPage() {
           if (header.includes('name')) entry.name = values[index];
           else if (header.includes('phone') || header.includes('mobile')) entry.phone = values[index];
           else if (header.includes('city')) entry.city = values[index];
+          else if (header.includes('address')) entry.address = values[index];
+          else if (header.includes('designation')) entry.designation = values[index];
           else if (header.includes('loan') || header.includes('type')) entry.loan_type = values[index];
-          else if (header.includes('amount')) entry.amount = parseFloat(values[index]) || 0;
+          else if (header.includes('amount') || header.includes('req')) entry.amount = parseFloat(values[index]) || 0;
+          else if (header.includes('income') || header.includes('salary')) entry.income = parseFloat(values[index]) || 0;
+          else if (header.includes('tenure')) entry.tenure = values[index];
+          else if (header.includes('emi')) entry.emi = parseFloat(values[index]) || 0;
+          else if (header.includes('pending')) entry.pending_emi = parseFloat(values[index]) || 0;
+          else if (header.includes('completed')) entry.completed_emi = parseFloat(values[index]) || 0;
+          else if (header.includes('previous') || header.includes('history')) entry.previous_loan = values[index];
         });
         
         if (!entry.name || !entry.phone) return null;

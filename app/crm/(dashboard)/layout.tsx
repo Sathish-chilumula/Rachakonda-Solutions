@@ -135,6 +135,12 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
         { name: 'Education Portal', href: '/crm/education', icon: GraduationCap },
       ]
     },
+    {
+      label: 'Direct Entry',
+      items: [
+        { name: 'Manual Lead', href: '/crm/leads/new', icon: FileText },
+      ]
+    },
     ...(isStaff ? [{
       label: 'Operations',
       items: [
@@ -142,11 +148,16 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
         { name: 'Audit Trail', href: '/crm/audit', icon: FileText },
       ]
     }] : []),
+    {
+      label: 'Personal',
+      items: [
+        { name: 'My Settings', href: '/crm/settings', icon: Settings },
+      ]
+    },
     ...(isAdmin ? [{
       label: 'System Admin',
       items: [
         { name: 'Team Directory', href: '/crm/users', icon: Users },
-        { name: 'Platform Settings', href: '/crm/settings', icon: Settings },
       ]
     }] : [])
   ];

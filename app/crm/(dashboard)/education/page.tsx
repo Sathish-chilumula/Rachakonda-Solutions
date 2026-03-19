@@ -21,13 +21,6 @@ function EducationContent() {
   const [search, setSearch] = useState('');
 
   const fetchData = useCallback(async () => {
-    // RESTRICTION: Sales cannot access Education
-    if (userRole === 'sales') {
-        setData([]);
-        setLoading(false);
-        return;
-    }
-
     setLoading(true);
     const { data: results, error } = await supabase
       .from('enrollments')
@@ -71,17 +64,6 @@ function EducationContent() {
     }
   };
 
-  if (userRole === 'sales') {
-    return (
-      <div className="flex flex-col items-center justify-center p-20 bg-white rounded-[3rem] border border-slate-100 shadow-sm text-center">
-        <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-6">
-          <AlertCircle className="w-10 h-10" />
-        </div>
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Access Restricted</h2>
-        <p className="text-slate-500 mt-2 max-w-sm font-bold uppercase text-[10px] tracking-widest">Education CRM is reserved for Administrators and Managers only.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">

@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import { Briefcase, FileDown, Hash, Search, Filter, ChevronRight, UserPlus, PhoneCall, MessageCircle, AlertCircle, MapPin, Phone, Check, X } from 'lucide-react';
+import { Briefcase, FileDown, Hash, Search, Filter, ChevronRight, UserPlus, PhoneCall, MessageCircle, AlertCircle, MapPin, Phone, Check, X, Eye, Target, Send } from 'lucide-react';
 import { useCRM } from '../context';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect, useCallback } from 'react';
@@ -28,6 +28,7 @@ function FinanceContent() {
   const [search, setSearch] = useState('');
   const [waMenuOpen, setWaMenuOpen] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [selectedLead, setSelectedLead] = useState<any>(null);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -37,20 +38,13 @@ function FinanceContent() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     
-    if (userRole !== 'sales') {
-      const { data: usersData } = await supabase
-        .from('profiles')
-        .select('id, email, name')
-        .eq('role', 'sales');
-      if (usersData) setSalesUsers(usersData);
-    }
+    const { data: usersData } = await supabase
+      .from('profiles')
+      .select('id, email, name')
+      .eq('role', 'sales');
+    if (usersData) setSalesUsers(usersData);
 
     let query = supabase.from('leads').select('*, profiles(email, name)');
-    
-    const targetUserId = impersonatedUser?.id || profile?.id;
-    if (userRole === 'sales') {
-      query = query.eq('assigned_to', targetUserId);
-    }
 
     const { data: results, error } = await query.order('created_at', { ascending: false });
     if (results && !error) setData(results);
@@ -410,9 +404,12 @@ function FinanceContent() {
                         )}
 
                         {/* Detail Link */}
-                        <Link href={`/crm/leads/${item.id}`} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
-                          <ChevronRight className="w-4 h-4" />
-                        </Link>
+                        <button 
+                          onClick={() => setSelectedLead(item)}
+                          className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all outline-none"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -422,6 +419,155 @@ function FinanceContent() {
           </table>
         </div>
       </div>
+
+      {/* Lead Detail Modal */}
+      <AnimatePresence>
+        {selectedLead && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedLead(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100"
+            >
+              {/* Header */}
+              <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-xl font-black">
+                    {selectedLead.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">{selectedLead.name}</h2>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mt-1">
+                      <Target className="w-3.5 h-3.5" /> ID: {selectedLead.id.slice(0,8)} • {selectedLead.loan_type?.replace(/-/g, ' ')}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedLead(null)}
+                  className="p-3 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Basic Info */}
+                  <div className="space-y-4">
+                    <h3 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] ml-1">Client Profile</h3>
+                    <div className="space-y-3">
+                      <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Phone</p>
+                        <p className="text-sm font-bold text-slate-700">{selectedLead.phone}</p>
+                      </div>
+                      <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Designation</p>
+                        <p className="text-sm font-bold text-slate-700">{selectedLead.designation || 'N/A'}</p>
+                      </div>
+                      <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Monthly Salary</p>
+                        <p className="text-sm font-bold text-slate-700">₹{selectedLead.income?.toLocaleString() || '0'}</p>
+                      </div>
+                      <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Address</p>
+                        <p className="text-sm font-bold text-slate-700 leading-relaxed">{selectedLead.address || selectedLead.city || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Loan Info */}
+                  <div className="space-y-4">
+                    <h3 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] ml-1">Loan Requirements</h3>
+                    <div className="space-y-3">
+                      <div className="p-4 bg-blue-50/30 rounded-2xl border border-blue-50/50">
+                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Required Amount</p>
+                        <p className="text-sm font-black text-blue-700">₹{selectedLead.amount?.toLocaleString() || '0'}</p>
+                      </div>
+                      <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Tenure / EMI</p>
+                        <p className="text-sm font-bold text-slate-700">{selectedLead.tenure || 'N/A'} • ₹{selectedLead.emi?.toLocaleString() || '0'}/mo</p>
+                      </div>
+                      <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Status</p>
+                        <p className="text-sm font-bold text-slate-700">
+                          {selectedLead.completed_emi ? `${selectedLead.completed_emi} EMIs Paid` : 'New Application'}
+                          {selectedLead.pending_emi ? ` • ${selectedLead.pending_emi} Pending` : ''}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Previous History</p>
+                        <p className="text-xs font-bold text-slate-500 italic leading-relaxed">{selectedLead.previous_loan || 'No previous history recorded'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      const text = `*Client Details (Rachakonda Solutions)*\n\n` +
+                        `*Name:* ${selectedLead.name}\n` +
+                        `*Phone:* ${selectedLead.phone}\n` +
+                        `*Designation:* ${selectedLead.designation || 'N/A'}\n` +
+                        `*Salary:* ₹${selectedLead.income || 0}\n` +
+                        `*Address:* ${selectedLead.address || selectedLead.city || 'N/A'}\n\n` +
+                        `*Loan Req:* ₹${selectedLead.amount || 0}\n` +
+                        `*Tenure:* ${selectedLead.tenure || 'N/A'}\n` +
+                        `*EMI:* ₹${selectedLead.emi || 0}\n` +
+                        `*EMIs:* ${selectedLead.completed_emi || 0} Paid / ${selectedLead.pending_emi || 0} Pending\n\n` +
+                        `*History:* ${selectedLead.previous_loan || 'None'}`;
+                      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                    }}
+                    className="h-12 px-6 rounded-2xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-emerald-100"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Forward WhatsApp
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const subject = `Lead Details: ${selectedLead.name}`;
+                      const body = `Client Details:\n\nName: ${selectedLead.name}\nPhone: ${selectedLead.phone}\nDesignation: ${selectedLead.designation || 'N/A'}\nSalary: ₹${selectedLead.income || 0}\nAddress: ${selectedLead.address || selectedLead.city || 'N/A'}\n\nLoan Req: ₹${selectedLead.amount || 0}\nTenure: ${selectedLead.tenure || 'N/A'}\nEMI: ₹${selectedLead.emi || 0}\nEMIs: ${selectedLead.completed_emi || 0} Paid / ${selectedLead.pending_emi || 0} Pending\n\nHistory: ${selectedLead.previous_loan || 'None'}`;
+                      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    }}
+                    className="h-12 px-5 rounded-2xl bg-white border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    Email
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                   <p className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">Mark as:</p>
+                   {['contacted', 'interested'].map(s => (
+                     <button 
+                       key={s}
+                       onClick={() => {
+                         handleStatusUpdate(selectedLead.id, s);
+                         setSelectedLead(null);
+                       }}
+                       className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-[9px] font-black uppercase tracking-[0.15em] text-slate-500 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm"
+                     >
+                       {s}
+                     </button>
+                   ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

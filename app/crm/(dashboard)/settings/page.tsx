@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Password state
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,8 +44,12 @@ export default function SettingsPage() {
   };
 
   const handleChangePassword = async () => {
+    if (!oldPassword) {
+      showToast('Please enter your current password', 'error');
+      return;
+    }
     if (newPassword.length < 6) {
-      showToast('Password must be at least 6 characters', 'error');
+      showToast('New password must be at least 6 characters', 'error');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -53,15 +58,29 @@ export default function SettingsPage() {
     }
 
     setChangingPassword(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    // Verify old password by attempting a re-login
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: profile?.email || '',
+      password: oldPassword
+    });
+
+    if (signInError) {
+      setChangingPassword(false);
+      showToast('Incorrect current password', 'error');
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
     setChangingPassword(false);
 
-    if (!error) {
+    if (!updateError) {
       showToast('Password changed successfully', 'success');
+      setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } else {
-      showToast(error.message || 'Failed to change password', 'error');
+      showToast(updateError.message || 'Failed to change password', 'error');
     }
   };
 
@@ -189,6 +208,19 @@ export default function SettingsPage() {
                 <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Change Password</h4>
 
                 <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Current Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                      <input
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        placeholder="Required for verification"
+                        className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/5 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">New Password</label>
                     <div className="relative">
