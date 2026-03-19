@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { motion } from 'framer-motion';
 import { 
   FileText, 
   Search, 
@@ -14,7 +13,9 @@ import {
   Hash,
   Database,
   ExternalLink,
-  Clock
+  Clock,
+  Briefcase,
+  GraduationCap
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -123,10 +124,7 @@ export default function AuditLogsPage() {
                 </tr>
               ) : (
                 filteredLogs.map((log, i) => (
-                  <motion.tr 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.02 }}
+                  <tr 
                     key={log.id} 
                     className="group hover:bg-slate-50/80 transition-all cursor-default"
                   >
@@ -172,7 +170,7 @@ export default function AuditLogsPage() {
                          )}
                        </div>
                     </td>
-                  </motion.tr>
+                  </tr>
                 ))
               )}
             </tbody>
@@ -181,11 +179,4 @@ export default function AuditLogsPage() {
       </div>
     </div>
   );
-}
-
-function Briefcase(props: any) {
-  return <path {...props} d="M16 7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h8zM8 7V5c0-1.1.9-2 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-}
-function GraduationCap(props: any) {
-  return <path {...props} d="M22 10v6M2 10l10-5 10 5-10 5zM6 12v5c3 3 9 3 12 0v-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 }

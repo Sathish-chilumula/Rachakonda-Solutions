@@ -2,11 +2,9 @@
 
 import { Suspense } from 'react';
 import { Briefcase, FileDown, Hash, Search, Filter, ChevronRight, UserPlus, PhoneCall, MessageCircle, AlertCircle, MapPin, Phone } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useCRM } from '../context';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect, useCallback } from 'react';
-import { format } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Link from 'next/link';

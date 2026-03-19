@@ -141,7 +141,7 @@ export default function DashboardPage() {
           <button onClick={() => fetchDashboardData()} className="h-12 px-6 rounded-2xl bg-white border border-slate-200 text-sm font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 shadow-sm transition-all border-b-4 active:border-b-0 active:translate-y-1">
              Sync Data
           </button>
-          <Link href="/crm/leads" className="h-12 px-6 rounded-2xl bg-blue-600 text-white text-sm font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1">
+          <Link href="/crm/finance" className="h-12 px-6 rounded-2xl bg-blue-600 text-white text-sm font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1">
              Manage Leads
              <ArrowRight className="w-4 h-4" />
           </Link>

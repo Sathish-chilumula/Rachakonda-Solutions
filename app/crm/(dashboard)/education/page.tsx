@@ -239,7 +239,7 @@ function EducationContent() {
                          <a href={`tel:${item.phone}`} className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-purple-600 hover:text-white transition-all">
                            <PhoneCall className="w-4 h-4" />
                          </a>
-                         <Link href={`/crm/leads/${item.id}`} className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
+                         <Link href={`/crm/enrollments/${item.id}`} className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
                            <ChevronRight className="w-4 h-4" />
                          </Link>
                        </div>
