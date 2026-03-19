@@ -54,6 +54,16 @@ export default function LoanPage({ params }: { params: Promise<{ loanType: strin
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
+      // Auto lead scoring
+      const monthlyIncome = parseInt(data.income) || 0;
+      const loanAmount = parseInt(data.amount) || 0;
+      let priority = 'cold';
+      if (monthlyIncome >= 50000 && loanAmount <= monthlyIncome * 60) {
+        priority = 'hot';
+      } else if (monthlyIncome >= 25000) {
+        priority = 'medium';
+      }
+
       // Direct insertion - Supabase client handles config check internally
       const { error } = await supabase.from('leads').insert([
         {
@@ -65,7 +75,8 @@ export default function LoanPage({ params }: { params: Promise<{ loanType: strin
           income: data.income,
           employment_type: data.employmentType,
           source: 'finance_website',
-          status: 'new'
+          status: 'new',
+          priority,
         },
       ]);
       

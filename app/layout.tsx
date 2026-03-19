@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   title: 'Rachakonda Solutions | Education & Finance',
   description: 'Empowering Education & Financial Growth. Premium business solutions.',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

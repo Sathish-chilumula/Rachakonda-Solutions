@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import FloatingChatWidget from '@/components/FloatingChatWidget';
+import StickyApplyCTA from '@/components/StickyApplyCTA';
+import ExitIntentPopup from '@/components/ExitIntentPopup';
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,6 +17,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <main className={isCRM ? "w-full" : "flex-grow"}>{children}</main>
       {!isCRM && <Footer />}
       {!isCRM && <FloatingChatWidget />}
+      {!isCRM && <StickyApplyCTA />}
+      {!isCRM && <ExitIntentPopup />}
     </>
   );
 }

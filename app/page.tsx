@@ -76,9 +76,13 @@ export default function Home() {
               </div>
               
               <h2 className="text-3xl font-bold text-slate-900 mb-4 font-display relative z-10">Finance</h2>
-              <p className="text-slate-600 text-lg mb-10 flex-grow relative z-10">
+              <p className="text-slate-600 text-lg mb-4 flex-grow relative z-10">
                 Tailored loans, comprehensive financial services, and expert advisory to secure your future.
               </p>
+              <div className="flex items-center gap-2 mb-6 relative z-10">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-xs font-bold text-amber-600">Limited approval slots today</span>
+              </div>
               
               <div className="flex items-center text-amber-600 font-semibold text-lg relative z-10 group-hover:text-blue-700 transition-colors">
                 Explore Finance 
@@ -263,16 +267,34 @@ export default function Home() {
         </div>
       </section>
       
+      {/* Stats Counter */}
+      <section className="py-12 bg-blue-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-3 gap-8 text-center">
+            <div>
+              <p className="text-3xl md:text-4xl font-black text-white">2,500+</p>
+              <p className="text-[10px] font-bold text-blue-300 uppercase tracking-widest mt-1">Happy Clients</p>
+            </div>
+            <div>
+              <p className="text-3xl md:text-4xl font-black text-amber-500">₹50Cr+</p>
+              <p className="text-[10px] font-bold text-blue-300 uppercase tracking-widest mt-1">Disbursed</p>
+            </div>
+            <div>
+              <p className="text-3xl md:text-4xl font-black text-white">98%</p>
+              <p className="text-[10px] font-bold text-blue-300 uppercase tracking-widest mt-1">Approval Rate</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Trust Indicators */}
-      <section className="py-20 bg-white border-t border-slate-100">
+      <section className="py-16 bg-white border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-8">Trusted by thousands of individuals and businesses</p>
-          <div className="flex flex-wrap justify-center gap-12 opacity-50 grayscale">
-            {/* Placeholder logos */}
-            <div className="text-2xl font-bold font-display">TechCorp</div>
-            <div className="text-2xl font-bold font-display">GlobalBank</div>
-            <div className="text-2xl font-bold font-display">EduFirst</div>
-            <div className="text-2xl font-bold font-display">InnovateInc</div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Partnered with India&apos;s leading banks</p>
+          <div className="flex flex-wrap justify-center gap-10 md:gap-16">
+            {['SBI', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak'].map((bank) => (
+              <span key={bank} className="text-lg font-black text-slate-300 uppercase tracking-wider hover:text-blue-600 transition-colors cursor-default">{bank}</span>
+            ))}
           </div>
         </div>
       </section>

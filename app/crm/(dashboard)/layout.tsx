@@ -382,6 +382,37 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
             </AnimatePresence>
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+          <div className="grid grid-cols-5">
+            {[
+              { name: 'Dashboard', href: '/crm', icon: LayoutDashboard },
+              { name: 'Finance', href: '/crm/finance', icon: Briefcase },
+              { name: 'Education', href: '/crm/education', icon: GraduationCap },
+              { name: 'Reports', href: '/crm/reports', icon: BarChart3 },
+              { name: 'Settings', href: '/crm/settings', icon: Settings },
+            ].map((item) => {
+              const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/crm');
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex flex-col items-center justify-center py-2.5 transition-colors",
+                    isActive ? "text-blue-600" : "text-slate-400"
+                  )}
+                >
+                  <item.icon className={cn("w-5 h-5 mb-0.5", isActive ? "text-blue-600" : "text-slate-400")} />
+                  <span className={cn("text-[9px] font-bold uppercase tracking-wider", isActive ? "text-blue-600" : "text-slate-400")}>
+                    {item.name}
+                  </span>
+                  {isActive && <div className="w-1 h-1 rounded-full bg-blue-600 mt-0.5" />}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       </div>
     </div>
   );
