@@ -6,6 +6,7 @@ import { useCRM } from '../context';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(' ');

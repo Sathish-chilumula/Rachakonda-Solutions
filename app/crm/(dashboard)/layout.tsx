@@ -74,7 +74,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
 
     fetchSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (!session) {
         router.push('/crm/login');
       }
