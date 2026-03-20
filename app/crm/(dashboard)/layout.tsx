@@ -131,7 +131,7 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
     {
       label: 'Business Units',
       items: [
-        { name: 'Website Leads', href: '/crm/finance', icon: Briefcase },
+        { name: 'Website Leads', href: '/crm/leads', icon: Briefcase },
         { name: 'Education Portal', href: '/crm/education', icon: GraduationCap },
       ]
     },

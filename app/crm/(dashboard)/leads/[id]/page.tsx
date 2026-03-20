@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Save, User, Phone, MapPin, Briefcase, DollarSign, Calendar, Clock, PhoneCall, AlertCircle, StickyNote, Tag, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useCRM } from '../../context';
 
 const WA_TEMPLATES = [
   { id: 'followup', label: 'Loan Follow-up', message: (name: string, loan: string) => `Hi ${name}, regarding your ${loan?.replace(/-/g, ' ')} enquiry at Rachakonda Solutions — our team is ready to assist you.` },
@@ -22,7 +23,9 @@ export default function LeadDetailPage() {
   const [saving, setSaving] = useState(false);
   const [waMenuOpen, setWaMenuOpen] = useState(false);
   
-  // Form state
+  const { profile, activeRole: userRole } = useCRM();
+  const [salesUsers, setSalesUsers] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [status, setStatus] = useState('');
   const [priority, setPriority] = useState('');
   const [remarks, setRemarks] = useState('');
@@ -52,9 +55,26 @@ export default function LeadDetailPage() {
 
     if (error || !data) {
       console.error(error);
-      router.push('/crm/finance');
+      router.push('/crm/leads');
       return;
     }
+
+    // Fetch users for assignment if admin/manager
+    if (userRole === 'admin' || userRole === 'manager') {
+      const { data: usersData } = await supabase
+        .from('profiles')
+        .select('id, email, name, role')
+        .in('role', ['sales', 'manager']);
+      if (usersData) setSalesUsers(usersData);
+    }
+
+    // Fetch Activity Timeline
+    const { data: logsData } = await supabase
+      .from('audit_logs')
+      .select('*, profiles(name, email)')
+      .eq('entity_id', id)
+      .order('created_at', { ascending: false });
+    if (logsData) setAuditLogs(logsData);
 
     setLead(data);
     setStatus(data.status);
@@ -136,7 +156,7 @@ export default function LeadDetailPage() {
       {/* Top Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 sm:px-0">
         <div className="flex items-center space-x-4">
-          <Link href="/crm/finance" className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-slate-500 shadow-sm">
+          <Link href="/crm/leads" className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-slate-500 shadow-sm">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -320,32 +340,137 @@ export default function LeadDetailPage() {
             </select>
           </div>
 
-          {/* Metadata */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Tracking</h2>
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
-                  <Calendar className="w-3.5 h-3.5 mr-1.5" /> Created
-                </p>
-                <p className="text-sm text-slate-900 font-medium">{format(new Date(lead.created_at), 'PPpp')}</p>
+	          {/* Assignment Panel */}
+	          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+	            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
+	              <User className="w-5 h-5 mr-2 text-blue-500" />
+	              Assignment
+	            </h2>
+	            {userRole === 'admin' || userRole === 'manager' ? (
+	              <div className="space-y-4">
+	                <select
+	                  value={lead.assigned_to || ''}
+	                  onChange={async (e) => {
+	                    const newUserId = e.target.value;
+	                    const { error } = await supabase
+	                      .from('leads')
+	                      .update({ assigned_to: newUserId || null, assigned_at: newUserId ? new Date().toISOString() : null })
+	                      .eq('id', lead.id);
+	                    if (!error) {
+	                      await supabase.from('audit_logs').insert({
+	                        user_id: profile?.id,
+	                        action: `Reassigned lead to ${salesUsers.find(u => u.id === newUserId)?.name || 'unassigned'}`,
+	                        entity_type: 'lead',
+	                        entity_id: lead.id,
+	                        details: { assigned_to: newUserId }
+	                      });
+	                      fetchLead();
+	                    }
+	                  }}
+	                  className="w-full px-4 py-3 border rounded-xl font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none text-sm bg-slate-50 text-slate-700"
+	                >
+	                  <option value="">Unassigned</option>
+	                  <optgroup label="Managers">
+	                    {salesUsers.filter(u => u.role === 'manager').map(u => 
+	                      <option key={u.id} value={u.id}>{u.name || u.email}</option>
+	                    )}
+	                  </optgroup>
+	                  <optgroup label="Sales Agents">
+	                    {salesUsers.filter(u => u.role === 'sales').map(u => 
+	                      <option key={u.id} value={u.id}>{u.name || u.email}</option>
+	                    )}
+	                  </optgroup>
+	                </select>
+	              </div>
+	            ) : (
+	              <div>
+	                {!lead.assigned_to ? (
+	                  <button
+	                    onClick={async () => {
+	                      const { error } = await supabase.from('leads').update({ assigned_to: profile?.id, assigned_at: new Date().toISOString() }).eq('id', lead.id);
+	                      if (!error) {
+	                        await supabase.from('audit_logs').insert({
+	                          user_id: profile?.id, action: `Self-assigned lead`, entity_type: 'lead', entity_id: lead.id
+	                        });
+	                        fetchLead();
+	                      }
+	                    }}
+	                    className="w-full py-2.5 bg-blue-50 text-blue-600 font-bold rounded-xl border border-blue-200 hover:bg-blue-600 hover:text-white transition-all text-sm"
+	                  >
+	                    Claim this Lead
+	                  </button>
+	                ) : (
+	                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+	                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 shadow-inner">
+	                      {lead.profiles?.name?.charAt(0) || lead.profiles?.email?.charAt(0) || 'U'}
+	                    </div>
+	                    <div>
+	                      <p className="text-sm font-bold text-slate-900">{lead.profiles?.name || lead.profiles?.email}</p>
+	                      <p className="text-xs text-slate-500">Currently Assigned</p>
+	                    </div>
+	                  </div>
+	                )}
+	              </div>
+	            )}
+	          </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+              <h2 className="text-lg font-bold text-slate-900 mb-4">Tracking</h2>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
+                    <Calendar className="w-3.5 h-3.5 mr-1.5" /> Created
+                  </p>
+                  <p className="text-sm text-slate-900 font-medium">{format(new Date(lead.created_at), 'PPpp')}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
+                    <Clock className="w-3.5 h-3.5 mr-1.5" /> Last Updated
+                  </p>
+                  <p className="text-sm text-slate-900 font-medium">{format(new Date(lead.updated_at), 'PPpp')}</p>
+                </div>
+                {lead.assigned_at && (
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
+                      <User className="w-3.5 h-3.5 mr-1.5" /> Assigned On
+                    </p>
+                    <p className="text-sm text-slate-900 font-medium">{format(new Date(lead.assigned_at), 'PPpp')}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
+                    <Briefcase className="w-3.5 h-3.5 mr-1.5" /> Source
+                  </p>
+                  <p className="text-sm text-slate-900 font-medium capitalize">{lead.source?.replace(/_/g, ' ')}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
-                  <Clock className="w-3.5 h-3.5 mr-1.5" /> Last Updated
-                </p>
-                <p className="text-sm text-slate-900 font-medium">{format(new Date(lead.updated_at), 'PPpp')}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
-                  <Briefcase className="w-3.5 h-3.5 mr-1.5" /> Source
-                </p>
-                <p className="text-sm text-slate-900 font-medium capitalize">{lead.source?.replace(/_/g, ' ')}</p>
+            </div>
+
+            {/* Audit Logs */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 max-h-96 overflow-y-auto custom-scrollbar">
+              <h2 className="text-lg font-bold text-slate-900 mb-4">Activity Timeline</h2>
+              <div className="space-y-4 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
+                {auditLogs.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic text-center">No recent activity.</p>
+                ) : auditLogs.map((log: any, idx: number) => (
+                  <div key={log.id} className="relative flex items-start gap-4 z-10">
+                    <div className="w-4 h-4 mt-1 rounded-full bg-blue-600 border-4 border-white shadow-sm shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{log.action}</p>
+                      <p className="text-xs font-medium text-slate-400 mt-0.5 flex items-center gap-1.5">
+                        <User className="w-3 h-3 text-slate-300" />
+                        {log.profiles?.name || log.profiles?.email || 'System'}
+                      </p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-300 mt-1">
+                        {format(new Date(log.created_at), 'MMM d, h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
-      </div>
 
       {/* Mobile Sticky Save Button */}
       <div className="md:hidden fixed bottom-16 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-30">

@@ -55,25 +55,26 @@ function LeadsContent() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     
-    // 1. Fetch Sales Profiles for assignment tasks
-    if (userRole !== 'sales' && activeTab === 'finance') {
+    // 1. Fetch Sales and Manager Profiles for assignment tasks
+    if (activeTab === 'finance') {
       const { data: usersData } = await supabase
         .from('profiles')
-        .select('id, email, name')
-        .eq('role', 'sales');
+        .select('id, email, name, role')
+        .in('role', ['sales', 'manager']);
       if (usersData) setSalesUsers(usersData);
     }
 
     // 2. Fetch Module Data
     let query;
     if (activeTab === 'finance') {
-      query = supabase.from('leads').select('*, profiles(email, name)');
+      query = supabase.from('leads').select('*, profiles(email, name, role)');
       
-      // RESTRICTION: Sales agents only see assigned leads
-      // If impersonating a sales user, we filter by THEIR ID
+      // RESTRICTION: Sales and Managers see their assigned leads ("My Work Queue") or unassigned ones (to claim)
+      // Admins see everything.
       const targetUserId = impersonatedUser?.id || profile?.id;
-      if (userRole === 'sales') {
-        query = query.eq('assigned_to', targetUserId);
+      if (userRole === 'sales' || userRole === 'manager') {
+        // Show assigned leads OR new unassigned leads they could potentially claim
+        query = query.or(`assigned_to.eq.${targetUserId},and(assigned_to.is.null,status.eq.new)`);
       }
     } else {
       // RESTRICTION: Sales agents cannot access Education CRM
@@ -122,12 +123,17 @@ function LeadsContent() {
     if (activeTab !== 'finance') return;
     const { error } = await supabase
       .from('leads')
-      .update({ assigned_to: userId || null })
+      .update({ assigned_to: userId || null, assigned_at: userId ? new Date().toISOString() : null })
       .eq('id', leadId);
     
     if (!error) {
       const targetUser = salesUsers.find(u => u.id === userId);
-      await logActivity(`Assigned lead to ${targetUser?.name || targetUser?.email}`, 'lead', leadId, { assigned_to: userId });
+      const isSelfAssign = userId === profile?.id;
+      const actionText = isSelfAssign 
+        ? `Self-assigned lead` 
+        : `Assigned lead to ${targetUser?.name || targetUser?.email}`;
+      
+      await logActivity(actionText, 'lead', leadId, { assigned_to: userId });
       fetchData();
     }
   };
@@ -158,7 +164,7 @@ function LeadsContent() {
       const agent = salesUsers[agentIndex];
       const { error } = await supabase
         .from('leads')
-        .update({ assigned_to: agent.id })
+        .update({ assigned_to: agent.id, assigned_at: new Date().toISOString() })
         .eq('id', lead.id);
       
       if (!error) {
@@ -400,17 +406,48 @@ function LeadsContent() {
                     </td>
                     <td className="px-4 py-5">
                         {activeTab === 'finance' ? (
-                          <div className="relative group/assign">
-                            <select 
-                              value={item.assigned_to || ''}
-                              onChange={(e) => handleAssign(item.id, e.target.value)}
-                              className="w-full bg-slate-50 border-none text-[11px] font-bold text-slate-600 rounded-xl py-2 pl-3 pr-8 appearance-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                          !item.assigned_to && (userRole === 'sales' || userRole === 'manager') ? (
+                            <button 
+                              onClick={() => handleAssign(item.id, profile?.id)}
+                              className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all w-full text-center border border-blue-200"
                             >
-                              <option value="">Unassigned</option>
-                              {salesUsers.map(u => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
-                            </select>
-                            <UserPlus className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                          </div>
+                              Assign to Me
+                            </button>
+                          ) : item.assigned_to && userRole !== 'admin' ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                                {item.profiles?.name?.charAt(0) || item.profiles?.email?.charAt(0) || 'U'}
+                              </div>
+                              <span className="text-[11px] font-bold text-slate-700 truncate w-24">
+                                {item.assigned_to === profile?.id ? 'Me' : (item.profiles?.name || item.profiles?.email)}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="relative group/assign">
+                              <select 
+                                value={item.assigned_to || ''}
+                                onChange={(e) => handleAssign(item.id, e.target.value)}
+                                className={cn(
+                                  "w-full border-none text-[11px] font-bold rounded-xl py-2 pl-3 pr-8 appearance-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer",
+                                  !item.assigned_to ? "bg-red-50 text-red-600 ring-1 ring-red-200" : "bg-slate-50 text-slate-600"
+                                )}
+                              >
+                                <option value="">Unassigned</option>
+                                {/* Group by role */}
+                                <optgroup label="Managers">
+                                  {salesUsers.filter(u => u.role === 'manager').map(u => 
+                                    <option key={u.id} value={u.id}>{u.name || u.email}</option>
+                                  )}
+                                </optgroup>
+                                <optgroup label="Sales Agents">
+                                  {salesUsers.filter(u => u.role === 'sales').map(u => 
+                                    <option key={u.id} value={u.id}>{u.name || u.email}</option>
+                                  )}
+                                </optgroup>
+                              </select>
+                              <UserPlus className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                            </div>
+                          )
                         ) : (
                           <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Admin Only</span>
                         )}
