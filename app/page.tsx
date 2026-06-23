@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, GraduationCap, Briefcase, BookOpen, Award, ArrowRight,
   ChevronRight, MapPin, Users, Star, TrendingUp, BookMarked,
   FlaskConical, Wheat, Code2, Pill, BrainCircuit, ShieldCheck,
-  Building2, FileText, Gift, Bell
+  Building2, Gift, CheckCircle
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -68,15 +69,18 @@ const journeyStages = [
 ];
 
 const popularExams = [
-  { name: 'TS EAMCET', body: 'JNTUH', eligibility: 'Intermediate (MPC/BiPC)', state: 'TS', color: 'blue' },
-  { name: 'AP EAMCET', body: 'JNTUA', eligibility: 'Intermediate (MPC/BiPC)', state: 'AP', color: 'blue' },
-  { name: 'TSPSC Group 2', body: 'TSPSC', eligibility: 'Degree', state: 'TS', color: 'teal' },
-  { name: 'APPSC Group 2', body: 'APPSC', eligibility: 'Degree', state: 'AP', color: 'teal' },
-  { name: 'POLYCET', body: 'SBTET', eligibility: '10th Pass', state: 'TS/AP', color: 'amber' },
-  { name: 'ICET', body: 'TSCHE/APSCHE', eligibility: 'Degree', state: 'TS/AP', color: 'purple' },
-  { name: 'NEET-UG', body: 'NTA', eligibility: 'Intermediate (BiPC)', state: 'National', color: 'green' },
-  { name: 'GATE', body: 'IIT', eligibility: 'B.Tech / Final Year', state: 'National', color: 'orange' },
-  { name: 'SSC CGL', body: 'SSC', eligibility: 'Degree', state: 'National', color: 'red' },
+  { slug: 'ts-eamcet', name: 'TS EAMCET', body: 'JNTUH', eligibility: 'Intermediate', state: 'TS', color: 'blue' },
+  { slug: 'ap-eamcet', name: 'AP EAMCET', body: 'JNTUA', eligibility: 'Intermediate', state: 'AP', color: 'blue' },
+  { slug: 'tspsc-group-2', name: 'TSPSC Group 2', body: 'TSPSC', eligibility: 'Degree', state: 'TS', color: 'teal' },
+  { slug: 'polycet', name: 'POLYCET', body: 'SBTET', eligibility: '10th Pass', state: 'TS/AP', color: 'amber' },
+  { slug: 'icet', name: 'ICET', body: 'TSCHE/APSCHE', eligibility: 'Degree', state: 'TS/AP', color: 'purple' },
+];
+
+const popularColleges = [
+  { slug: 'jntuh-hyderabad', name: 'JNTUH', location: 'Hyderabad', category: 'Engineering', color: 'blue' },
+  { slug: 'osmania-university', name: 'Osmania University', location: 'Hyderabad', category: 'University', color: 'teal' },
+  { slug: 'andhra-university', name: 'Andhra University', location: 'Visakhapatnam', category: 'University', color: 'purple' },
+  { slug: 'gandhi-medical-college', name: 'Gandhi Medical College', location: 'Secunderabad', category: 'Medical', color: 'rose' },
 ];
 
 const collegeCategories = [
@@ -84,15 +88,6 @@ const collegeCategories = [
   { name: 'Medical & Pharmacy', icon: Pill, count: '80+ colleges', color: 'teal', href: '/colleges' },
   { name: 'Agriculture', icon: Wheat, count: '40+ colleges', color: 'green', href: '/colleges' },
   { name: 'Arts & Science', icon: BookMarked, count: '500+ colleges', color: 'purple', href: '/colleges' },
-];
-
-const careerRoadmaps = [
-  { title: 'Computer Science & IT', icon: Code2, desc: 'B.Tech → Full Stack/AI → MNC/Startup', color: 'blue', href: '/career-guidance' },
-  { title: 'AI & Data Science', icon: BrainCircuit, desc: 'EAMCET → CS degree → Data roles', color: 'teal', href: '/career-guidance' },
-  { title: 'Government Service', icon: ShieldCheck, desc: 'Degree → TSPSC/APPSC → Gazetted Officer', color: 'amber', href: '/career-guidance' },
-  { title: 'Agriculture', icon: Wheat, desc: 'BiPC → B.Sc Agri → KVK/ICAR/AO', color: 'green', href: '/career-guidance' },
-  { title: 'Pharmacy', icon: Pill, desc: 'BiPC → B.Pharm → Hospital/Industry', color: 'purple', href: '/career-guidance' },
-  { title: 'Biotechnology', icon: FlaskConical, desc: 'BiPC → B.Tech Biotech → Research/Industry', color: 'rose', href: '/career-guidance' },
 ];
 
 const latestNotifications = [
@@ -129,100 +124,176 @@ const dotColorMap: Record<string, string> = {
 export default function Home() {
   const [activeStage, setActiveStage] = useState('after-10th');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState<'colleges' | 'exams' | 'courses'>('colleges');
   const currentStage = journeyStages.find(s => s.id === activeStage)!;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 overflow-hidden">
 
-      {/* ═══ HERO ═══════════════════════════════════════════════════════════ */}
-      <section className="relative pt-28 pb-20 lg:pt-36 lg:pb-28 overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
-        {/* Background pattern */}
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=1920')] opacity-5 bg-cover bg-center" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/60 to-slate-950" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl" />
+      {/* ═══ PREMIUM HERO (AGI STYLE) ════════════════════════════════════════ */}
+      <section className="relative pt-24 pb-16 lg:pt-36 lg:pb-32 bg-slate-900 overflow-hidden">
+        {/* Background Elements */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-30"
+          style={{ backgroundImage: "url('/abstract_education_bg.png')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-blue-900/40" />
+        <div className="absolute top-1/4 left-0 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-3xl -translate-x-1/2" />
+        <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-teal-500/10 rounded-full blur-3xl translate-x-1/3 translate-y-1/3" />
 
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
-          {/* TS/AP Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 rounded-full px-4 py-2 mb-6"
-          >
-            <MapPin className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-semibold text-blue-300">Serving Students Across Telangana &amp; Andhra Pradesh</span>
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-tight font-display"
-          >
-            Your Complete Guide to<br />
-            <span className="text-amber-400">Education &amp; Careers</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto"
-          >
-            Free career guidance, college search, exam info, scholarships, and government job alerts — all in one place for TS &amp; AP students.
-          </motion.p>
-
-          {/* Search Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="max-w-2xl mx-auto"
-          >
-            <div className="relative flex items-center bg-white rounded-2xl shadow-2xl overflow-hidden border border-white/20">
-              <Search className="absolute left-5 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search colleges, exams, scholarships, government jobs..."
-                className="w-full pl-14 pr-36 py-5 text-slate-900 text-base outline-none bg-transparent placeholder:text-slate-400"
-              />
-              <Link
-                href={`/exams${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''}`}
-                className="absolute right-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors"
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+            
+            {/* Left Content (Text & Search) */}
+            <div className="text-center lg:text-left pt-10 lg:pt-0">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 bg-blue-500/20 border border-blue-400/30 rounded-full px-4 py-2 mb-6 backdrop-blur-sm"
               >
-                Search
-              </Link>
+                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-sm font-semibold text-blue-200">Rachakonda Solutions</span>
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-4xl sm:text-5xl lg:text-7xl font-black text-white mb-6 tracking-tight leading-[1.1] font-display"
+              >
+                Find Your True <br className="hidden sm:block" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-200">Career Path</span>
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-lg sm:text-xl text-blue-100/90 mb-10 max-w-xl mx-auto lg:mx-0 font-medium leading-relaxed"
+              >
+                The #1 trusted platform for students in Telangana &amp; Andhra Pradesh. Explore top colleges, latest exams, and expert career guidance.
+              </motion.p>
+
+              {/* Tabbed Search Bar */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white/10 backdrop-blur-xl p-2 sm:p-3 rounded-3xl border border-white/20 shadow-2xl max-w-2xl mx-auto lg:mx-0"
+              >
+                {/* Search Tabs */}
+                <div className="flex items-center gap-2 mb-3 px-2">
+                  {(['colleges', 'exams', 'courses'] as const).map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setSearchType(type)}
+                      className={`px-4 py-1.5 rounded-full text-sm font-bold capitalize transition-colors ${
+                        searchType === type 
+                          ? 'bg-amber-500 text-slate-900 shadow-md' 
+                          : 'text-slate-300 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Input Area */}
+                <div className="relative flex items-center bg-white rounded-2xl shadow-inner overflow-hidden">
+                  <Search className="absolute left-4 w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={`Search for top ${searchType} in TS & AP...`}
+                    className="w-full pl-12 pr-32 py-4 sm:py-5 text-slate-900 text-sm sm:text-base font-medium outline-none bg-transparent placeholder:text-slate-400"
+                  />
+                  <Link
+                    href={`/${searchType}${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''}`}
+                    className="absolute right-2 bg-slate-900 hover:bg-blue-700 text-white font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm transition-all shadow-md"
+                  >
+                    Search
+                  </Link>
+                </div>
+              </motion.div>
             </div>
-            <p className="text-sm text-blue-300 mt-3">
-              Popular: <Link href="/exams" className="underline hover:text-white">TS EAMCET</Link>
-              {' · '}<Link href="/colleges" className="underline hover:text-white">Engineering Colleges</Link>
-              {' · '}<Link href="/government-jobs" className="underline hover:text-white">TSPSC Group 2</Link>
-              {' · '}<Link href="/scholarships" className="underline hover:text-white">TS ePass</Link>
-            </p>
-          </motion.div>
+
+            {/* Right Content (Images & Badges) */}
+            <div className="relative hidden lg:block h-[600px] w-full">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                transition={{ delay: 0.2, duration: 0.7, ease: "easeOut" }}
+                className="absolute inset-0 z-10 flex items-center justify-center"
+              >
+                {/* Main Hero Image */}
+                <div className="relative w-full max-w-lg aspect-square rounded-[3rem] overflow-hidden border-[8px] border-white/10 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
+                  <Image 
+                    src="/hero_students.png" 
+                    alt="Students" 
+                    fill 
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+
+                {/* Trust Badge 1 */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="absolute top-12 -left-12 bg-white rounded-2xl p-4 shadow-2xl border border-slate-100 flex items-center gap-4 z-20 animate-bounce-slow"
+                >
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <Award className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black text-slate-900 leading-none">10k+</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Students Guided</p>
+                  </div>
+                </motion.div>
+
+                {/* Trust Badge 2 */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
+                  className="absolute bottom-24 -right-8 bg-white rounded-2xl p-4 shadow-2xl border border-slate-100 flex items-center gap-4 z-20 animate-bounce-slow-delayed"
+                >
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                    <Building2 className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black text-slate-900 leading-none">100+</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">Partner Colleges</p>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </div>
+
+          </div>
         </div>
       </section>
 
-      {/* ═══ QUICK ACTIONS ══════════════════════════════════════════════════ */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10 mb-16">
-        <div className="grid grid-cols-5 gap-3">
+      {/* ═══ QUICK ACTIONS (MOBILE FIXED) ═══════════════════════════════════ */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 mb-16">
+        <div className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 pb-4 lg:grid lg:grid-cols-5 lg:overflow-visible">
           {quickActions.map((action, i) => (
             <motion.div
               key={action.label}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.07 }}
+              className="snap-start shrink-0 w-[140px] lg:w-auto"
             >
               <Link
                 href={action.href}
-                className={`flex flex-col items-center gap-2 p-4 rounded-2xl border bg-white shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 group ${action.hover}`}
+                className={`flex flex-col items-center gap-3 p-5 rounded-3xl border bg-white shadow-lg shadow-slate-200/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group ${action.hover}`}
               >
-                <div className={`w-12 h-12 rounded-xl ${action.color} flex items-center justify-center border group-hover:bg-white/20 group-hover:border-white/30 transition-colors`}>
-                  <action.icon className="w-6 h-6" />
+                <div className={`w-14 h-14 rounded-2xl ${action.color} flex items-center justify-center border group-hover:bg-white/20 group-hover:border-white/30 transition-colors`}>
+                  <action.icon className="w-7 h-7" />
                 </div>
-                <span className="text-xs font-bold text-slate-700 group-hover:text-white text-center leading-tight transition-colors">{action.label}</span>
+                <span className="text-sm font-bold text-slate-700 group-hover:text-white text-center leading-tight transition-colors">{action.label}</span>
               </Link>
             </motion.div>
           ))}
@@ -238,21 +309,21 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mb-10"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3 font-display">
-              Your <span className="text-blue-600">Student Journey</span>
+            <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-4 font-display tracking-tight">
+              Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">Student Journey</span>
             </h2>
-            <p className="text-slate-500 text-lg">Choose your stage and discover the right path forward.</p>
+            <p className="text-slate-500 text-lg max-w-2xl mx-auto font-medium">Choose your stage and let our AI-driven insights guide you to the perfect career path.</p>
           </motion.div>
 
           {/* Stage Tabs */}
-          <div className="flex flex-wrap gap-2 justify-center mb-10">
+          <div className="flex overflow-x-auto hide-scrollbar gap-2 justify-start sm:justify-center mb-10 pb-2">
             {journeyStages.map((stage) => (
               <button
                 key={stage.id}
                 onClick={() => setActiveStage(stage.id)}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                className={`px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 shrink-0 ${
                   activeStage === stage.id
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-105'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -261,407 +332,150 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Path Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-            {currentStage.paths.map((path, i) => (
-              <motion.div
-                key={path.name}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08 }}
-                className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300"
-              >
-                <div className={`w-10 h-10 rounded-xl ${colorMap[path.color]} flex items-center justify-center mb-4 border`}>
-                  <path.icon className="w-5 h-5" />
-                </div>
-                <h3 className="font-bold text-slate-900 text-sm mb-2 leading-snug">{path.name}</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">{path.desc}</p>
-              </motion.div>
-            ))}
+          {/* Path Cards - Animated */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            <AnimatePresence mode="wait">
+              {currentStage.paths.map((path, i) => (
+                <motion.div
+                  key={path.name + currentStage.id}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: i * 0.05, duration: 0.2 }}
+                  className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group"
+                >
+                  <div className={`w-12 h-12 rounded-2xl ${colorMap[path.color]} flex items-center justify-center mb-5 border group-hover:scale-110 transition-transform duration-300`}>
+                    <path.icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-base mb-2 leading-snug group-hover:text-blue-600 transition-colors">{path.name}</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed font-medium">{path.desc}</p>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
           <div className="text-center">
             <Link
               href={currentStage.href}
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-full transition-all shadow-md shadow-blue-600/20 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black px-10 py-4 rounded-full transition-all shadow-xl shadow-blue-600/20 hover:-translate-y-1"
             >
-              Full Guide: {currentStage.label} <ArrowRight className="w-4 h-4" />
+              Explore Full Guide <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ═══ POPULAR EXAMS ══════════════════════════════════════════════════ */}
-      <section className="py-16 bg-slate-50">
+      {/* ═══ DYNAMIC CONTENT CAROUSELS (EXAMS & COLLEGES) ═══════════════════ */}
+      <section className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="flex items-end justify-between mb-10"
-          >
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+            {/* Left: Top Exams */}
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 font-display mb-2">
-                Popular <span className="text-blue-600">Exams</span>
-              </h2>
-              <p className="text-slate-500">Key entrance & competitive exams for TS &amp; AP students</p>
-            </div>
-            <Link href="/exams" className="hidden sm:flex items-center gap-1 text-blue-600 font-semibold hover:text-blue-800 text-sm">
-              View All Exams <ChevronRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {popularExams.map((exam, i) => (
-              <motion.div
-                key={exam.name}
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-              >
-                <Link
-                  href="/exams"
-                  className="group block bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`w-8 h-8 rounded-lg ${colorMap[exam.color]} flex items-center justify-center border`}>
-                      <div className={`w-2.5 h-2.5 rounded-full ${dotColorMap[exam.color]}`} />
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{exam.state}</span>
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm mb-1 group-hover:text-blue-600 transition-colors">{exam.name}</h3>
-                  <p className="text-[11px] text-slate-500 leading-snug">{exam.eligibility}</p>
-                  <p className="text-[10px] text-slate-400 mt-1">{exam.body}</p>
+              <div className="flex items-end justify-between mb-8">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 font-display tracking-tight">Top <span className="text-blue-600">Exams</span></h2>
+                  <p className="text-slate-500 mt-1 font-medium">Click for syllabus & dates</p>
+                </div>
+                <Link href="/exams" className="text-blue-600 font-bold hover:text-blue-800 text-sm flex items-center gap-1">
+                  View All <ChevronRight className="w-4 h-4" />
                 </Link>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="text-center mt-6 sm:hidden">
-            <Link href="/exams" className="inline-flex items-center gap-1 text-blue-600 font-semibold text-sm">
-              View All Exams <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ COLLEGE EXPLORER ═══════════════════════════════════════════════ */}
-      <section className="py-16 bg-white border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="flex items-end justify-between mb-10"
-          >
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 font-display mb-2">
-                College <span className="text-blue-600">Explorer</span>
-              </h2>
-              <p className="text-slate-500">Find top colleges in Telangana &amp; Andhra Pradesh</p>
-            </div>
-            <Link href="/colleges" className="hidden sm:flex items-center gap-1 text-blue-600 font-semibold hover:text-blue-800 text-sm">
-              Browse Colleges <ChevronRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            {collegeCategories.map((cat, i) => (
-              <motion.div
-                key={cat.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <Link
-                  href={cat.href}
-                  className="group block bg-slate-50 hover:bg-blue-600 rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className={`w-14 h-14 rounded-2xl ${colorMap[cat.color]} flex items-center justify-center mb-4 border group-hover:bg-white/20 group-hover:border-white/30 transition-colors`}>
-                    <cat.icon className="w-7 h-7 group-hover:text-white transition-colors" />
-                  </div>
-                  <h3 className="font-bold text-slate-900 group-hover:text-white text-base mb-1 transition-colors">{cat.name}</h3>
-                  <p className="text-sm text-slate-500 group-hover:text-blue-100 transition-colors">{cat.count}</p>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ SCHOLARSHIPS ═══════════════════════════════════════════════════ */}
-      <section className="py-16 bg-gradient-to-br from-purple-600 to-blue-700 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=1920')] opacity-10 bg-cover bg-center" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-10"
-          >
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 font-display">
-              Scholarships &amp; Financial Aid
-            </h2>
-            <p className="text-purple-100 text-lg">Don&apos;t let finances stop your education — explore all available schemes</p>
-          </motion.div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: 'Telangana Scholarships', count: 'TS ePass, Ambedkar, BC Welfare', href: '/scholarships', icon: '🏛️' },
-              { label: 'AP Scholarships', count: 'YSR Vidya Deevena, AP ePass', href: '/scholarships', icon: '🎓' },
-              { label: 'National Scholarships', count: 'NSP, Post-Matric, Merit-cum-Means', href: '/scholarships', icon: '🇮🇳' },
-              { label: 'Research Fellowships', count: 'JRF, SRF, PDF, CSIR', href: '/scholarships', icon: '🔬' },
-            ].map((scheme, i) => (
-              <motion.div
-                key={scheme.label}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <Link
-                  href={scheme.href}
-                  className="group block bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-2xl p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1"
-                >
-                  <div className="text-3xl mb-3">{scheme.icon}</div>
-                  <h3 className="font-bold text-white text-sm mb-2">{scheme.label}</h3>
-                  <p className="text-purple-200 text-xs leading-relaxed">{scheme.count}</p>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="text-center mt-8">
-            <Link
-              href="/scholarships"
-              className="inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-8 py-3 rounded-full shadow-lg hover:bg-blue-50 transition-colors"
-            >
-              <Gift className="w-4 h-4" />
-              Find Your Scholarship
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ GOVERNMENT JOBS ════════════════════════════════════════════════ */}
-      <section className="py-16 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="flex items-end justify-between mb-10"
-          >
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 font-display mb-2">
-                Government <span className="text-teal-600">Jobs</span>
-              </h2>
-              <p className="text-slate-500">Browse openings in TS &amp; AP by your qualification</p>
-            </div>
-            <Link href="/government-jobs" className="hidden sm:flex items-center gap-1 text-teal-600 font-semibold hover:text-teal-800 text-sm">
-              All Jobs <ChevronRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-            {['10th Pass', 'Intermediate', 'Degree', 'B.Tech', 'M.Sc / PG', 'PhD'].map((qual, i) => (
-              <motion.div
-                key={qual}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.07 }}
-              >
-                <Link
-                  href="/government-jobs"
-                  className="block text-center bg-white border border-slate-100 hover:border-teal-300 hover:bg-teal-50 rounded-xl py-4 px-3 text-sm font-semibold text-slate-700 hover:text-teal-700 transition-all shadow-sm hover:shadow-md"
-                >
-                  {qual}
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Latest notifications preview */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {latestNotifications.map((notif, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-              >
-                <Link
-                  href={notif.type === 'Govt Job' ? '/government-jobs' : notif.type === 'Scholarship' ? '/scholarships' : '/exams'}
-                  className="group block bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`w-6 h-6 rounded-lg ${colorMap[notif.color]} flex items-center justify-center border`}>
-                      <Bell className="w-3 h-3" />
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{notif.type}</span>
-                    <span className={`ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full ${colorMap[notif.color]}`}>{notif.badge}</span>
-                  </div>
-                  <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors leading-snug mb-2">{notif.title}</p>
-                  <p className="text-xs text-slate-400">{notif.time}</p>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ CAREER GUIDANCE ════════════════════════════════════════════════ */}
-      <section className="py-16 bg-white border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-10"
-          >
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 font-display mb-3">
-              Career <span className="text-amber-500">Guidance</span>
-            </h2>
-            <p className="text-slate-500 text-lg">Free roadmaps for popular career paths in Telangana &amp; AP</p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {careerRoadmaps.map((career, i) => (
-              <motion.div
-                key={career.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <Link
-                  href={career.href}
-                  className="group flex items-center gap-4 bg-slate-50 hover:bg-blue-600 rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className={`w-12 h-12 rounded-xl ${colorMap[career.color]} flex items-center justify-center border shrink-0 group-hover:bg-white/20 group-hover:border-white/30 transition-colors`}>
-                    <career.icon className="w-6 h-6 group-hover:text-white transition-colors" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 group-hover:text-white text-sm transition-colors">{career.title}</h3>
-                    <p className="text-xs text-slate-500 group-hover:text-blue-100 transition-colors mt-0.5">{career.desc}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-white ml-auto shrink-0 transition-colors" />
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="text-center mt-8">
-            <Link
-              href="/career-guidance"
-              className="inline-flex items-center gap-2 border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-bold px-8 py-3 rounded-full transition-all duration-300"
-            >
-              <TrendingUp className="w-4 h-4" />
-              Explore All Career Paths
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ STATS + ABOUT PREVIEW ══════════════════════════════════════════ */}
-      <section className="py-16 bg-slate-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center mb-14">
-            {[
-              { value: '5,000+', label: 'Students Guided', color: 'text-white' },
-              { value: '20+', label: 'Expert Courses', color: 'text-amber-400' },
-              { value: '10+', label: 'Years Experience', color: 'text-white' },
-              { value: 'Free', label: 'Career Guidance', color: 'text-teal-400' },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className={`text-4xl md:text-5xl font-black mb-2 ${stat.color}`}>{stat.value}</p>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{stat.label}</p>
               </div>
-            ))}
+
+              <div className="space-y-4">
+                {popularExams.map((exam, i) => (
+                  <motion.div
+                    key={exam.name}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <Link
+                      href={`/exams/${exam.slug}`}
+                      className="group flex items-center justify-between bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl ${colorMap[exam.color]} flex items-center justify-center border shrink-0`}>
+                          <span className="font-black text-xs uppercase tracking-widest">{exam.state}</span>
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-lg">{exam.name}</h3>
+                          <p className="text-xs text-slate-500 font-medium">{exam.conductingBody}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Featured Colleges */}
+            <div>
+              <div className="flex items-end justify-between mb-8">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 font-display tracking-tight">Featured <span className="text-teal-600">Colleges</span></h2>
+                  <p className="text-slate-500 mt-1 font-medium">Explore top institutions</p>
+                </div>
+                <Link href="/colleges" className="text-teal-600 font-bold hover:text-teal-800 text-sm flex items-center gap-1">
+                  View All <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {popularColleges.map((college, i) => (
+                  <motion.div
+                    key={college.name}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <Link
+                      href={`/colleges/${college.slug}`}
+                      className="block h-full bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-teal-300 transition-all group"
+                    >
+                      <div className={`w-10 h-10 rounded-xl ${colorMap[college.color]} flex items-center justify-center border mb-4`}>
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <h3 className="font-bold text-slate-900 group-hover:text-teal-600 transition-colors mb-1 line-clamp-2">{college.name}</h3>
+                      <div className="flex items-center gap-1 text-xs text-slate-500 font-medium mt-2">
+                        <MapPin className="w-3.5 h-3.5" /> {college.location}
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* CTA Banner */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="bg-gradient-to-r from-blue-600 to-teal-500 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6"
-          >
-            <div>
-              <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">Not sure what to do next?</h3>
-              <p className="text-blue-100">Book a free 30-minute counseling call. Our experts will guide you step by step.</p>
-            </div>
-            <Link
-              href="/contact"
-              className="shrink-0 bg-white text-blue-700 font-bold px-8 py-4 rounded-full shadow-lg hover:bg-blue-50 transition-colors text-sm flex items-center gap-2"
-            >
-              <GraduationCap className="w-4 h-4" />
-              Book Free Counseling
-            </Link>
-          </motion.div>
         </div>
       </section>
 
-      {/* ═══ OUR COURSES ════════════════════════════════════════════════════ */}
-      <section className="py-16 bg-slate-50 border-t border-slate-200">
+      {/* ═══ LATEST NOTIFICATIONS TICKER ════════════════════════════════════ */}
+      <section className="py-12 bg-white border-y border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="flex items-end justify-between mb-10"
-          >
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 font-display mb-2">
-                Our <span className="text-blue-600">Skill Courses</span>
-              </h2>
-              <p className="text-slate-500">Professional training programs for TS &amp; AP students &amp; professionals</p>
+          <div className="flex flex-col md:flex-row gap-6 items-center">
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </div>
+              <h2 className="text-lg font-black text-slate-900 uppercase tracking-widest">Latest Updates</h2>
             </div>
-            <Link href="/education" className="hidden sm:flex items-center gap-1 text-blue-600 font-semibold hover:text-blue-800 text-sm">
-              All Courses <ChevronRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              { title: 'Full Stack Web Development', duration: '6 Months', mode: 'Online / Offline', icon: Code2, href: '/education/full-stack-web', tag: 'Most Popular' },
-              { title: 'Data Science & Machine Learning', duration: '8 Months', mode: 'Online', icon: BrainCircuit, href: '/education/data-science', tag: 'High Demand' },
-              { title: 'Study Abroad Counseling', duration: 'Flexible', mode: 'Offline', icon: Award, href: '/education/study-abroad', tag: 'Expert Guided' },
-            ].map((course, i) => (
-              <motion.div
-                key={course.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <Link
-                  href={course.href}
-                  className="group block bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className="h-36 bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center relative">
-                    <course.icon className="w-16 h-16 text-white/30" />
-                    <div className="absolute top-3 left-3 bg-amber-400 text-slate-900 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
-                      {course.tag}
-                    </div>
+            
+            <div className="flex-1 w-full overflow-x-auto hide-scrollbar">
+              <div className="flex gap-4 min-w-max">
+                {latestNotifications.map((notif, i) => (
+                  <div key={i} className={`flex items-center gap-3 px-4 py-2 rounded-xl border ${colorMap[notif.color]} bg-white shadow-sm`}>
+                    <span className="px-2 py-0.5 rounded bg-white font-black text-[10px] uppercase tracking-widest border border-current">{notif.badge}</span>
+                    <span className="text-sm font-bold text-slate-800">{notif.title}</span>
+                    <span className="text-xs font-medium text-slate-400 ml-2">{notif.time}</span>
                   </div>
-                  <div className="p-5">
-                    <h3 className="font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">{course.title}</h3>
-                    <div className="flex gap-3 text-xs text-slate-500 mb-4">
-                      <span className="flex items-center gap-1"><FileText className="w-3 h-3" />{course.duration}</span>
-                      <span className="flex items-center gap-1"><Users className="w-3 h-3" />{course.mode}</span>
-                    </div>
-                    <div className="flex items-center text-blue-600 font-semibold text-sm group-hover:gap-2 transition-all">
-                      View Details <ChevronRight className="w-4 h-4 ml-1" />
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
