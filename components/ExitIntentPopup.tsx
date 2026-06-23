@@ -10,7 +10,7 @@ export default function ExitIntentPopup() {
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [loanType, setLoanType] = useState('personal-loan');
+  const [interest, setInterest] = useState('engineering');
 
   const triggerPopup = useCallback(() => {
     const shown = sessionStorage.getItem('exit_popup_shown');
@@ -47,7 +47,7 @@ export default function ExitIntentPopup() {
       await supabase.from('leads').insert([{
         name,
         phone,
-        loan_type: loanType,
+        loan_type: interest,
         status: 'new',
         source: 'exit_popup',
         priority: 'hot',
@@ -83,7 +83,7 @@ export default function ExitIntentPopup() {
                 <Zap className="w-8 h-8 text-emerald-600" />
               </div>
               <h3 className="text-2xl font-black text-slate-900 mb-2">You&apos;re In! 🎉</h3>
-              <p className="text-sm text-slate-500">Our loan expert will call you within 30 minutes.</p>
+              <p className="text-sm text-slate-500">Our career expert will call you within 30 minutes.</p>
               <button
                 onClick={() => setShow(false)}
                 className="mt-6 px-8 py-3 bg-slate-900 text-white rounded-full text-sm font-bold hover:bg-slate-800 transition-colors"
@@ -99,10 +99,10 @@ export default function ExitIntentPopup() {
                   <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Don&apos;t Miss Out</span>
                 </div>
                 <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-                  Wait! Check Your Loan<br />Eligibility First
+                  Wait! Get Free Career<br />Counseling First
                 </h3>
                 <p className="text-sm text-slate-500 mt-2">
-                  Get instant approval decision in just 2 minutes. No documents needed.
+                  Talk to our expert counselors to find the right path.
                 </p>
               </div>
 
@@ -134,17 +134,15 @@ export default function ExitIntentPopup() {
                 <div className="relative">
                   <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                   <select
-                    value={loanType}
-                    onChange={(e) => setLoanType(e.target.value)}
+                    value={interest}
+                    onChange={(e) => setInterest(e.target.value)}
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none"
                   >
-                    <option value="personal-loan">Personal Loan</option>
-                    <option value="home-loan">Home Loan</option>
-                    <option value="business-loan">Business Loan</option>
-                    <option value="gold-loan">Gold Loan</option>
-                    <option value="car-loan">Car Loan</option>
-                    <option value="education-loan">Education Loan</option>
-                    <option value="mortgage-loan">Mortgage Loan</option>
+                    <option value="engineering">Engineering Counseling</option>
+                    <option value="medical">Medical Counseling</option>
+                    <option value="degree">Degree/PG Admission</option>
+                    <option value="jobs">Government Jobs Info</option>
+                    <option value="other">Other Query</option>
                   </select>
                 </div>
 
@@ -154,7 +152,7 @@ export default function ExitIntentPopup() {
                   className="w-full py-4 bg-blue-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {submitting ? 'Checking...' : (
-                    <>Check My Eligibility <ArrowRight className="w-4 h-4" /></>
+                    <>Book Free Call <ArrowRight className="w-4 h-4" /></>
                   )}
                 </button>
 
