@@ -18,7 +18,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       {!isCRM && <Footer />}
       {!isCRM && <FloatingChatWidget />}
       {!isCRM && <StickyApplyCTA />}
-      {!isCRM && <ExitIntentPopup />}
     </>
   );
 }
