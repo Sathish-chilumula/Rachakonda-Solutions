@@ -28,9 +28,9 @@ export default function FloatingChatWidget() {
 
   // Determine the pre-filled message based on the current route
   const getMessage = () => {
-    if (pathname.startsWith('/education')) {
+    if (pathname?.startsWith('/education')) {
       return "Hi Rachakonda Solutions, I'm interested in your Education services. Could you please provide more information?";
-    } else if (pathname.startsWith('/finance')) {
+    } else if (pathname?.startsWith('/finance')) {
       return "Hi Rachakonda Solutions, I'm interested in your Finance services. Could you please provide more information?";
     } else {
       return "Hi Rachakonda Solutions, I'd like to know more about your services.";

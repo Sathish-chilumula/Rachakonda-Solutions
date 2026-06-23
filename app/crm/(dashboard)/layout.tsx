@@ -208,7 +208,7 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
                 </h3>
                 <nav className="space-y-1">
                   {group.items.map((item) => {
-                    const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/crm');
+                    const isActive = pathname === item.href || (pathname?.startsWith(item.href) && item.href !== '/crm');
                     return (
                       <Link
                         key={item.name}
@@ -367,7 +367,7 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
             <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               <span>Rachakonda</span>
               <ChevronRight className="w-3 h-3" />
-              <span className="text-blue-600">{pathname.split('/').pop() || 'Dashboard'}</span>
+              <span className="text-blue-600">{pathname?.split('/').pop() || 'Dashboard'}</span>
             </div>
             {isImpersonating && (
               <motion.div 
@@ -400,12 +400,12 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
           <div className="grid grid-cols-5">
             {[
               { name: 'Dashboard', href: '/crm', icon: LayoutDashboard },
-              { name: 'Finance', href: '/crm/finance', icon: Briefcase },
+              { name: 'Enrollments', href: '/crm/enrollments', icon: GraduationCap },
               { name: 'Education', href: '/crm/education', icon: GraduationCap },
               { name: 'Reports', href: '/crm/reports', icon: BarChart3 },
               { name: 'Settings', href: '/crm/settings', icon: Settings },
             ].map((item) => {
-              const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/crm');
+              const isActive = pathname === item.href || (pathname?.startsWith(item.href) && item.href !== '/crm');
               return (
                 <Link
                   key={item.name}

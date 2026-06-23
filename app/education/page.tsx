@@ -92,16 +92,24 @@ export default function EducationPortal() {
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-6xl font-bold mb-6 font-display"
           >
-            Upgrade Your Skills with <span className="text-amber-500">Industry-Level Training</span>
+            Skill Courses for <span className="text-amber-500">TS &amp; AP Students</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-xl text-blue-100 max-w-2xl mx-auto mb-10"
+            className="text-xl text-blue-100 max-w-2xl mx-auto mb-4"
           >
-            Discover premium courses, expert consultancy, and specialized training programs designed for your success.
+            Professional training programs, expert consultancy, and career-ready courses — designed for students and professionals in Telangana and Andhra Pradesh.
           </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="inline-flex items-center gap-2 bg-blue-600/30 border border-blue-400/30 rounded-full px-4 py-2 mb-6"
+          >
+            <span className="text-xs font-semibold text-blue-200">📍 Serving Telangana &amp; Andhra Pradesh</span>
+          </motion.div>
 
           {/* Search Bar */}
           <motion.div 
