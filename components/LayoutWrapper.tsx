@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import FloatingChatWidget from '@/components/FloatingChatWidget';
 import StickyApplyCTA from '@/components/StickyApplyCTA';
-import ExitIntentPopup from '@/components/ExitIntentPopup';
+import WebsitePreloader from '@/components/WebsitePreloader';
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,6 +13,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   return (
     <>
+      {!isCRM && <WebsitePreloader />}
       {!isCRM && <Header />}
       <main className={isCRM ? "w-full" : "flex-grow"}>{children}</main>
       {!isCRM && <Footer />}

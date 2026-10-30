@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Phone, Mail, MapPin, ArrowRight, ExternalLink } from 'lucide-react';
 
 export default function Footer() {
@@ -13,13 +14,27 @@ export default function Footer() {
 
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-4">
-            <Link href="/" className="inline-block mb-4">
-              <h3 className="text-2xl font-bold text-white tracking-tight">
-                Rachakonda <span className="text-amber-500">Solutions</span>
-              </h3>
+            <Link href="/" className="inline-flex items-center gap-3 mb-4 group">
+              <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-white p-1 shadow-md border border-white/20 group-hover:scale-105 transition-transform shrink-0">
+                <Image
+                  src="/images/logo.webp"
+                  alt="Rachakonda Solutions Official Logo"
+                  fill
+                  className="object-contain p-0.5"
+                  unoptimized
+                />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-white tracking-tight leading-tight">
+                  Rachakonda <span className="text-amber-500">Solutions</span>
+                </h3>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
+                  ESTD 2012 &bull; Pvt Ltd
+                </span>
+              </div>
             </Link>
             <p className="text-slate-400 mb-4 text-sm leading-relaxed max-w-sm">
-              Premier education consultancy, competitive exam training, and career guidance for students across Telangana and Andhra Pradesh.
+              All Questions, One Place, One Solution. Premier education consultancy, competitive exam training, and career guidance for students across Telangana and Andhra Pradesh.
             </p>
 
             {/* TS/AP Service Area Badge */}

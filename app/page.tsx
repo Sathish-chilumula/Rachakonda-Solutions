@@ -492,6 +492,28 @@ export default function Home() {
                   We welcome students and parents to meet our senior counselors in person for free academic assessments, entrance exam roadmaps, and admission counseling.
                 </p>
 
+                {/* Founder Leadership Badge */}
+                <div className="flex items-center gap-3.5 bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 max-w-md mb-6">
+                  <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-slate-800 shrink-0 border border-amber-400/50 shadow-md">
+                    <Image
+                      src="/images/founder-prashanth-square.webp"
+                      alt="Prashanth - Founder & CEO"
+                      fill
+                      className="object-cover object-top"
+                      unoptimized
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-white text-sm">Prashanth</h4>
+                      <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        Founder &amp; CEO
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-200 mt-0.5">Personal career &amp; admission counseling available</p>
+                  </div>
+                </div>
+
                 <div className="space-y-3 text-slate-300 text-sm mb-8">
                   <div className="flex items-start gap-3">
                     <MapPin className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />

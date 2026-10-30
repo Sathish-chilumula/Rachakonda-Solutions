@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown, GraduationCap, MapPin, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -89,16 +90,22 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0 group">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md group-hover:bg-blue-700 transition-colors">
-              R
+          <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm bg-white p-1 border border-slate-200 group-hover:scale-105 transition-transform shrink-0">
+              <Image
+                src="/images/logo.webp"
+                alt="Rachakonda Solutions Logo"
+                fill
+                className="object-contain p-0.5"
+                unoptimized
+              />
             </div>
             <div className="hidden sm:block">
               <span className={`font-bold text-lg tracking-tight leading-none block ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 Rachakonda <span className="text-amber-500">Solutions</span>
               </span>
-              <span className={`text-[10px] font-medium tracking-wider ${isLight ? 'text-slate-500' : 'text-blue-200'}`}>
-                EDUCATION &amp; CAREER GUIDANCE
+              <span className={`text-[10px] font-bold tracking-wider ${isLight ? 'text-slate-500' : 'text-blue-200'}`}>
+                ESTD 2012 &bull; TS &amp; AP
               </span>
             </div>
           </Link>
