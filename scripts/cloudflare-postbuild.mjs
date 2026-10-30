@@ -6,6 +6,7 @@ const openNextDir = path.resolve('.open-next');
 const workerSrc = path.join(openNextDir, 'worker.js');
 const workerDest = path.join(openNextDir, '_worker.js');
 const assetsDir = path.join(openNextDir, 'assets');
+const publicDir = path.resolve('public');
 
 console.log('--- Running Cloudflare Pages Post-Build Script ---');
 
@@ -18,7 +19,6 @@ if (fs.existsSync(workerSrc)) {
 }
 
 // 2. Copy the contents of the assets/ directory to the root of .open-next/
-// Cloudflare Pages expects static assets at the root of the output directory
 if (fs.existsSync(assetsDir)) {
   fs.cpSync(assetsDir, openNextDir, { recursive: true });
   console.log('✅ Copied static assets to the root of .open-next');
@@ -26,17 +26,27 @@ if (fs.existsSync(assetsDir)) {
   console.log('⚠️ assets directory not found in .open-next');
 }
 
+// 2b. Explicitly copy public/ directory to the root of .open-next/
+if (fs.existsSync(publicDir)) {
+  fs.cpSync(publicDir, openNextDir, { recursive: true });
+  console.log('✅ Copied public/ directory to the root of .open-next');
+}
+
 // 3. Generate _routes.json for Cloudflare Pages
-// This ensures static assets are served directly by CF Pages and not routed to _worker.js (which 404s them)
+// This ensures static assets are served directly by CF Pages edge CDN and not routed to _worker.js
 const routesJson = {
   version: 1,
   include: ["/*"],
   exclude: [
     "/_next/static/*",
+    "/gallery/*",
+    "/images/*",
     "/favicon.ico",
     "/manifest.json",
     "/icon.svg",
-    "/sw.js"
+    "/sw.js",
+    "/hero_students.png",
+    "/abstract_education_bg.png"
   ]
 };
 

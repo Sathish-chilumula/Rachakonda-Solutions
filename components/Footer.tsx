@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
+import { Phone, Mail, MapPin, ArrowRight, ExternalLink } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -19,7 +19,7 @@ export default function Footer() {
               </h3>
             </Link>
             <p className="text-slate-400 mb-4 text-sm leading-relaxed max-w-sm">
-              Expert education consultancy and career guidance for students across Telangana and Andhra Pradesh. Helping students make the right choices since 2014.
+              Premier education consultancy, competitive exam training, and career guidance for students across Telangana and Andhra Pradesh.
             </p>
 
             {/* TS/AP Service Area Badge */}
@@ -27,9 +27,6 @@ export default function Footer() {
               <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
               <span className="text-xs font-semibold text-blue-300">Serving Telangana &amp; Andhra Pradesh</span>
             </div>
-
-            {/* TODO: Add real social media links when available */}
-            {/* Social icons removed — real URLs not yet provided */}
           </div>
 
           {/* Quick Links */}
@@ -42,8 +39,8 @@ export default function Footer() {
                 { name: 'After 10th', path: '/after-10th' },
                 { name: 'After Inter', path: '/after-inter' },
                 { name: 'After Degree', path: '/after-degree' },
-                { name: 'Colleges', path: '/colleges' },
-                { name: 'Exams', path: '/exams' },
+                { name: 'Colleges Explorer', path: '/colleges' },
+                { name: 'Entrance Exams', path: '/exams' },
               ].map((link) => (
                 <li key={link.name}>
                   <Link
@@ -66,7 +63,7 @@ export default function Footer() {
             <ul className="space-y-3">
               {[
                 { name: 'Government Jobs', path: '/government-jobs' },
-                { name: 'Scholarships', path: '/scholarships' },
+                { name: 'Scholarships Hub', path: '/scholarships' },
                 { name: 'Career Guidance', path: '/career-guidance' },
                 { name: 'Study Resources', path: '/resources' },
                 { name: 'Our Courses', path: '/education' },
@@ -85,18 +82,42 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Contact Info */}
+          {/* Contact Info & Official Address */}
           <div className="col-span-1 md:col-span-4 md:col-start-9">
             <h4 className="text-sm font-bold mb-5 text-white uppercase tracking-widest">
-              Contact Us
+              Head Office &amp; Campus
             </h4>
             <div className="space-y-4">
+              <div className="group flex items-start p-3 -ml-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all duration-300">
+                <div className="w-9 h-9 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 mr-3 group-hover:bg-teal-500/20 group-hover:scale-110 transition-all duration-300">
+                  <MapPin className="w-4 h-4 text-teal-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5 font-bold">Office Address</p>
+                  <p className="text-slate-300 group-hover:text-white transition-colors text-sm font-medium leading-relaxed">
+                    <strong>Rachakonda Solutions</strong><br />
+                    Prashantha Complex, 2nd &amp; 3rd Floor,<br />
+                    Above LIC Office, Beside Gajwel Bus Stand Main Road,<br />
+                    Gajwel, Telangana 502278
+                  </p>
+                  <a
+                    href="https://maps.app.goo.gl/Udj1B5VZeBn2jo5dA?g_st=aw"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 font-bold mt-2 group-hover:underline"
+                  >
+                    <span>View on Google Maps</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+
               <div className="group flex items-start p-3 -ml-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all duration-300">
                 <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mr-3 group-hover:bg-blue-500/20 group-hover:scale-110 transition-all duration-300">
                   <Phone className="w-4 h-4 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Phone</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5 font-bold">Helpline / WhatsApp</p>
                   <a href="tel:+919640333313" className="text-slate-300 group-hover:text-white transition-colors text-sm font-medium">
                     +91 9640333313
                   </a>
@@ -108,22 +129,10 @@ export default function Footer() {
                   <Mail className="w-4 h-4 text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Email</p>
-                  <a href="mailto:contact@rachakondasolutions.com" className="text-slate-300 group-hover:text-white transition-colors text-sm font-medium">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5 font-bold">Email</p>
+                  <a href="mailto:contact@rachakondasolutions.com" className="text-slate-300 group-hover:text-white transition-colors text-sm font-medium break-all">
                     contact@rachakondasolutions.com
                   </a>
-                </div>
-              </div>
-
-              <div className="group flex items-start p-3 -ml-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all duration-300">
-                <div className="w-9 h-9 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 mr-3 group-hover:bg-teal-500/20 group-hover:scale-110 transition-all duration-300">
-                  <MapPin className="w-4 h-4 text-teal-400" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Office</p>
-                  <p className="text-slate-300 group-hover:text-white transition-colors text-sm font-medium">
-                    Hyderabad, Telangana
-                  </p>
                 </div>
               </div>
             </div>
@@ -132,15 +141,15 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-slate-500 text-sm">
+          <p className="text-slate-500 text-sm text-center md:text-left">
             &copy; {new Date().getFullYear()} Rachakonda Solutions. All rights reserved.
-            <span className="mx-2 text-slate-700">|</span>
-            Education &amp; Career Guidance, Telangana &amp; Andhra Pradesh
+            <span className="mx-2 text-slate-700 hidden sm:inline">|</span>
+            <span className="block sm:inline mt-1 sm:mt-0">Education &amp; Career Guidance — Gajwel, Telangana &amp; AP</span>
           </p>
-          <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex flex-wrap justify-center gap-4 text-sm">
             <Link href="/privacy" className="text-slate-500 hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="text-slate-500 hover:text-white transition-colors">Terms of Service</Link>
-            <Link href="/crm" className="text-slate-500 hover:text-white transition-colors">CRM Login</Link>
+            <Link href="/crm" className="text-slate-500 hover:text-white transition-colors">CRM Portal</Link>
           </div>
         </div>
       </div>
