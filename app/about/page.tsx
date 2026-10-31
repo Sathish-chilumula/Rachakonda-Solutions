@@ -68,14 +68,14 @@ export default function AboutPage() {
       </section>
 
       {/* ═══ FOUNDER & CEO SPOTLIGHT SECTION ═══ */}
-      <section className="py-20 bg-white border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 rounded-[2.5rem] p-8 sm:p-14 text-white shadow-2xl relative overflow-hidden border border-white/10">
+      <section className="py-12 sm:py-20 bg-white border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-14 text-white shadow-2xl relative overflow-hidden border border-white/10">
             {/* Ambient Lighting */}
             <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none" />
             <div className="absolute bottom-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-[90px] pointer-events-none" />
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center relative z-10">
               
               {/* Founder Portrait with Executive Frame */}
               <motion.div
@@ -85,7 +85,7 @@ export default function AboutPage() {
                 transition={{ duration: 0.6 }}
                 className="lg:col-span-5 flex flex-col items-center sm:items-start"
               >
-                <div className="relative w-full max-w-sm aspect-4/5 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/15 bg-slate-800">
+                <div className="relative w-full max-w-xs sm:max-w-sm aspect-4/5 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 sm:border-4 border-white/15 bg-slate-800">
                   <Image
                     src="/images/founder-prashanth.webp"
                     alt="Prashanth - Founder & CEO of Rachakonda Solutions"
@@ -97,12 +97,12 @@ export default function AboutPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
                   
                   {/* Verified Badge */}
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-400 text-slate-950 rounded-full text-xs font-black uppercase tracking-wider mb-1.5 shadow-md">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Founder &amp; CEO
+                  <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-amber-400 text-slate-950 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider mb-1 sm:mb-1.5 shadow-md">
+                      <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Founder &amp; CEO
                     </span>
-                    <h3 className="text-xl sm:text-2xl font-black text-white font-display">Prashanth</h3>
-                    <p className="text-xs text-blue-200 font-semibold">Rachakonda Solution Private Limited</p>
+                    <h3 className="text-lg sm:text-2xl font-black text-white font-display">Prashanth</h3>
+                    <p className="text-[11px] sm:text-xs text-blue-200 font-semibold">Rachakonda Solution Private Limited</p>
                   </div>
                 </div>
               </motion.div>
@@ -298,7 +298,7 @@ export default function AboutPage() {
             <p className="text-base sm:text-lg text-slate-600 font-medium">Expert guidance from seasoned educators who understand TS and AP academic frameworks.</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-8">
             {counselors.map((counselor, i) => (
               <motion.div
                 key={i}
@@ -306,7 +306,7 @@ export default function AboutPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all text-center group flex flex-col items-center"
+                className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all text-center group flex flex-col items-center"
               >
                 {counselor.image ? (
                   <div className="relative w-24 h-24 rounded-3xl overflow-hidden mb-5 border-2 border-blue-500 shadow-md group-hover:scale-105 transition-transform bg-slate-100">

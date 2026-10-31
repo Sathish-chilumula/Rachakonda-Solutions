@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import FloatingChatWidget from '@/components/FloatingChatWidget';
 import StickyApplyCTA from '@/components/StickyApplyCTA';
 import WebsitePreloader from '@/components/WebsitePreloader';
+import MobileBottomNav from '@/components/MobileBottomNav';
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,10 +16,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     <>
       {!isCRM && <WebsitePreloader />}
       {!isCRM && <Header />}
-      <main className={isCRM ? "w-full" : "flex-grow"}>{children}</main>
+      <main className={isCRM ? "w-full" : "flex-grow pb-16 md:pb-0"}>{children}</main>
       {!isCRM && <Footer />}
       {!isCRM && <FloatingChatWidget />}
       {!isCRM && <StickyApplyCTA />}
+      {!isCRM && <MobileBottomNav />}
     </>
   );
 }

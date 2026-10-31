@@ -233,24 +233,26 @@ export default function CareerGuidanceHub() {
 
         <motion.div
           initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6"
         >
           {roadmaps.map((rm) => (
             <motion.div key={rm.title} variants={fadeUp}>
               <Link
                 href={rm.href}
-                className={`group flex flex-col h-full border ${rm.border} rounded-2xl p-6 bg-white transition-all hover:-translate-y-1 hover:shadow-md`}
+                className={`group flex flex-col justify-between h-full border ${rm.border} rounded-2xl p-3.5 sm:p-6 bg-white transition-all hover:-translate-y-1 hover:shadow-md active:scale-[0.98]`}
               >
-                <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl mb-4 ${rm.iconBg}`}>
-                  {rm.icon}
+                <div>
+                  <div className={`inline-flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 rounded-xl mb-2 sm:mb-4 ${rm.iconBg}`}>
+                    {rm.icon}
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-slate-400 block mb-0.5">{rm.badge}</span>
+                  <h3 className="text-sm sm:text-xl font-bold text-slate-900 mb-1 sm:mb-2 group-hover:text-blue-600 transition-colors">
+                    {rm.title}
+                  </h3>
+                  <p className="text-slate-500 text-xs sm:text-sm line-clamp-2 sm:line-clamp-none mb-2">{rm.desc}</p>
                 </div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">{rm.badge}</span>
-                <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
-                  {rm.title}
-                </h3>
-                <p className="text-slate-500 text-sm flex-1">{rm.desc}</p>
-                <span className="mt-4 inline-flex items-center gap-1 text-blue-600 text-sm font-semibold group-hover:gap-2 transition-all">
-                  View Roadmap <ArrowRight className="h-4 w-4" />
+                <span className="mt-2 inline-flex items-center gap-1 text-blue-600 text-xs sm:text-sm font-semibold group-hover:gap-2 transition-all">
+                  View Roadmap <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </span>
               </Link>
             </motion.div>
@@ -259,13 +261,13 @@ export default function CareerGuidanceHub() {
       </section>
 
       {/* Browse by Stage */}
-      <section className="bg-slate-50 py-20">
+      <section className="bg-slate-50 py-12 sm:py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
-            <div className="text-center mb-10">
+            <div className="text-center mb-8 sm:mb-10">
               <SectionTag label="By Stage" />
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Browse by Your Current Stage</h2>
-              <p className="text-slate-500 max-w-2xl mx-auto">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-2 sm:mb-3">Browse by Your Current Stage</h2>
+              <p className="text-slate-500 text-xs sm:text-base max-w-2xl mx-auto">
                 No matter where you are in your education journey, we have the right guidance.
               </p>
             </div>
@@ -273,24 +275,26 @@ export default function CareerGuidanceHub() {
 
           <motion.div
             initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+            className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5"
           >
             {stages.map((s) => (
               <motion.div key={s.title} variants={fadeUp}>
                 <Link
                   href={s.href}
-                  className="group flex flex-col h-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all"
+                  className="group flex flex-col justify-between h-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-1 transition-all active:scale-[0.98]"
                 >
-                  <div className={`bg-gradient-to-br ${s.gradient} p-6 text-white flex items-center justify-center`}>
+                  <div className={`bg-gradient-to-br ${s.gradient} p-3.5 sm:p-6 text-white flex items-center justify-center`}>
                     {s.icon}
                   </div>
-                  <div className="p-5 flex-1 flex flex-col">
-                    <h3 className="text-base font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
-                      {s.title}
-                    </h3>
-                    <p className="text-slate-500 text-sm flex-1">{s.desc}</p>
-                    <span className="mt-3 inline-flex items-center gap-1 text-blue-600 text-sm font-semibold">
-                      Explore <ArrowRight className="h-3.5 w-3.5" />
+                  <div className="p-3 sm:p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-xs sm:text-base font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+                        {s.title}
+                      </h3>
+                      <p className="text-slate-500 text-[11px] sm:text-sm line-clamp-2 sm:line-clamp-none mb-2">{s.desc}</p>
+                    </div>
+                    <span className="mt-1 sm:mt-3 inline-flex items-center gap-1 text-blue-600 text-[11px] sm:text-sm font-semibold">
+                      Explore <ArrowRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </span>
                   </div>
                 </Link>

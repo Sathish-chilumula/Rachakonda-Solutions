@@ -53,22 +53,22 @@ export default function ContactPage() {
     <div className="min-h-screen bg-slate-50 pt-24 pb-20">
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white py-16 relative overflow-hidden">
+      <section className="bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white py-10 sm:py-16 relative overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center opacity-15" style={{ backgroundImage: "url('/images/abstract_education_bg.webp')" }} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 rounded-full px-4 py-2 mb-6"
+            className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 rounded-full px-3.5 py-1.5 mb-4"
           >
-            <MapPin className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-semibold text-blue-300">Head Office: Gajwel, Telangana | Serving TS &amp; AP</span>
+            <MapPin className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-xs sm:text-sm font-semibold text-blue-300">Head Office: Gajwel, Telangana | Serving TS &amp; AP</span>
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-black mb-4 font-display tracking-tight"
+            className="text-2xl sm:text-4xl md:text-5xl font-black mb-3 font-display tracking-tight"
           >
             Connect With <span className="text-amber-400">Our Counselors</span>
           </motion.h1>
@@ -76,21 +76,21 @@ export default function ContactPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto font-medium"
+            className="text-sm sm:text-lg text-blue-100 max-w-2xl mx-auto font-medium"
           >
             Have questions regarding college admissions, entrance exams, or career choices? Visit our campus or get in touch below.
           </motion.p>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-14">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-10">
 
           {/* Contact Info Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
             
             {/* Main Office Card */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xs border border-slate-200">
               <h3 className="text-xl font-bold text-slate-900 mb-6 font-display flex items-center gap-2">
                 <Compass className="w-5 h-5 text-blue-600" /> Office &amp; Campus Location
               </h3>
@@ -188,9 +188,9 @@ export default function ContactPage() {
 
           {/* Contact Form */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-200">
-              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2 font-display">Send Us a Message</h3>
-              <p className="text-slate-500 text-sm sm:text-base mb-8 font-medium">Fill out the form below. An academic counselor will contact you within 4 business hours.</p>
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-xs border border-slate-200">
+              <h3 className="text-xl sm:text-3xl font-black text-slate-900 mb-1 sm:mb-2 font-display">Send Us a Message</h3>
+              <p className="text-slate-500 text-xs sm:text-base mb-6 sm:mb-8 font-medium">Fill out the form below. An academic counselor will contact you within 4 business hours.</p>
 
               {submitSuccess ? (
                 <motion.div

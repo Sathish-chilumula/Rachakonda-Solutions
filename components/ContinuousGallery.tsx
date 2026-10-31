@@ -145,7 +145,7 @@ export default function ContinuousGallery() {
             <div
               key={`row1-${item.id}-${index}`}
               onClick={() => setSelectedImage(item)}
-              className="group relative w-72 sm:w-88 h-52 sm:h-60 rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer shrink-0 border border-slate-200/80 bg-slate-900 shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+              className="group relative w-60 sm:w-88 h-44 sm:h-60 rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer shrink-0 border border-slate-200/80 bg-slate-900 shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
             >
               <Image
                 src={item.src}
@@ -196,7 +196,7 @@ export default function ContinuousGallery() {
             <div
               key={`row2-${item.id}-${index}`}
               onClick={() => setSelectedImage(item)}
-              className="group relative w-72 sm:w-88 h-52 sm:h-60 rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer shrink-0 border border-slate-200/80 bg-slate-900 shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+              className="group relative w-60 sm:w-88 h-44 sm:h-60 rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer shrink-0 border border-slate-200/80 bg-slate-900 shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
             >
               <Image
                 src={item.src}

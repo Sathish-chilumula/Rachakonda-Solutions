@@ -34,7 +34,7 @@ export default function FloatingChatWidget() {
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(getMessage())}`;
 
   return (
-    <div className="fixed bottom-16 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end">
+    <aside aria-label="Live Chat Support" className="fixed bottom-20 md:bottom-6 right-3.5 md:right-6 z-50 flex flex-col items-end">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -42,7 +42,7 @@ export default function FloatingChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ duration: 0.2 }}
-            className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 mb-4 w-72 sm:w-80"
+            className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-5 mb-3 w-[calc(100vw-2rem)] max-w-xs sm:w-80"
           >
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center space-x-3">
@@ -99,6 +99,6 @@ export default function FloatingChatWidget() {
           </svg>
         )}
       </motion.button>
-    </div>
+    </aside>
   );
 }

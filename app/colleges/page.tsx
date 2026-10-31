@@ -107,20 +107,20 @@ export default function CollegesPage() {
       </section>
 
       {/* ── Filter Bar ── */}
-      <section className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm py-4 px-4">
+      <section className="sticky top-12 sm:top-14 md:top-16 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs py-3 sm:py-4 px-3 sm:px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1 text-slate-500 shrink-0">
-              <Filter className="w-4 h-4" />
-              <span className="text-sm font-medium">Filter:</span>
+              <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium">Filter:</span>
             </div>
             {/* State Filter */}
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 sm:gap-2">
               {(['All', 'TS', 'AP'] as StateFilter[]).map((s) => (
                 <button
                   key={s}
                   onClick={() => setStateFilter(s)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${stateFilter === s ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  className={`text-xs font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all active:scale-95 ${stateFilter === s ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                 >
                   {s === 'All' ? 'All States' : s}
                 </button>
@@ -128,12 +128,12 @@ export default function CollegesPage() {
             </div>
             <div className="w-px h-5 bg-slate-200 hidden sm:block" />
             {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {categories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${categoryFilter === cat ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  className={`text-xs font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all active:scale-95 ${categoryFilter === cat ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                 >
                   {cat}
                 </button>
@@ -144,17 +144,16 @@ export default function CollegesPage() {
       </section>
 
       {/* ── College Grid ── */}
-      <section className="py-16 px-4 bg-slate-50">
+      <section className="py-10 sm:py-16 px-3 sm:px-4 bg-slate-50">
         <div className="max-w-6xl mx-auto">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-            <motion.div variants={fadeUp} className="flex items-center justify-between mb-8">
+            <motion.div variants={fadeUp} className="flex items-center justify-between mb-6 sm:mb-8">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
                   {filtered.length} College{filtered.length !== 1 ? 's' : ''} Found
                 </h2>
-                <p className="text-slate-500 text-sm mt-1">
-                  {/* TODO: Expand to 200+ colleges with verified data from NAAC, UGC & state boards */}
-                  Showing sample data — contact us for complete college database
+                <p className="text-slate-500 text-xs sm:text-sm mt-0.5 sm:mt-1">
+                  Showing top TS &amp; AP universities, engineering and medical colleges
                 </p>
               </div>
             </motion.div>
@@ -168,12 +167,12 @@ export default function CollegesPage() {
                 </button>
               </motion.div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
                 {filtered.map((col, i) => {
                   const CatIcon = categoryIcons[col.category] || Building2;
                   const catColor = categoryColors[col.category] || 'bg-slate-100 text-slate-700';
                   return (
-                    <motion.div key={i} variants={fadeUp} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-lg transition-all group">
+                    <motion.div key={i} variants={fadeUp} className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 hover:shadow-lg transition-all group active:scale-[0.99]">
                       <div className="flex items-start justify-between mb-4">
                         <div className={`p-2 rounded-xl ${catColor}`}>
                           <CatIcon className="w-5 h-5" />
