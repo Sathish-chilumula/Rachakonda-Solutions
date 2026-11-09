@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, hasSupabaseConfig } from '@/lib/supabase';
 import { motion } from 'framer-motion';
-import { Lock, Mail, AlertCircle, ArrowRight, User } from 'lucide-react';
+import { Lock, Mail, AlertCircle, ArrowRight, User, CheckCircle2, Globe, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CRMLogin() {
@@ -15,6 +15,13 @@ export default function CRMLogin() {
   const router = useRouter();
 
   const [session, setSession] = useState<any>(null);
+  const [isLoggedOut, setIsLoggedOut] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('logged_out=true')) {
+      setIsLoggedOut(true);
+    }
+  }, []);
 
   useEffect(() => {
     // Check if already logged in
@@ -87,6 +94,34 @@ export default function CRMLogin() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Top Navbar linking back to main site */}
+      <div className="absolute top-4 left-4 right-4 sm:top-6 sm:left-8 sm:right-8 flex items-center justify-between z-20">
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold group-hover:scale-105 transition-transform">
+            R
+          </div>
+          <span className="text-base font-extrabold text-slate-900 tracking-tight">
+            Solutions<span className="text-blue-600">.</span>
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href="/careers"
+            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200 shadow-2xs transition-all"
+          >
+            <span>Walk-in Drive (95 Posts)</span>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-blue-700 bg-white hover:bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs transition-all"
+          >
+            <Globe className="w-3.5 h-3.5 text-blue-600" />
+            <span>← Back to Website</span>
+          </Link>
+        </div>
+      </div>
+
       {/* Background decoration */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-3xl"></div>
@@ -113,6 +148,16 @@ export default function CRMLogin() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white py-8 px-6 shadow-xl shadow-slate-200/50 rounded-3xl sm:px-10 border border-slate-100"
         >
+          {isLoggedOut && (
+            <div className="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl p-4 flex items-center justify-between text-xs font-bold shadow-2xs">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                Signed out successfully from CRM.
+              </span>
+              <Link href="/" className="text-blue-700 hover:underline">Go to Website →</Link>
+            </div>
+          )}
+
           {!hasSupabaseConfig && (
             <div className="mb-6 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 flex items-start">
               <AlertCircle className="w-5 h-5 mr-3 shrink-0 mt-0.5 text-amber-600" />
@@ -214,6 +259,16 @@ export default function CRMLogin() {
             </form>
           )}
         </motion.div>
+
+        <div className="mt-6 flex flex-col items-center gap-2 text-center">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-blue-700 bg-white/90 hover:bg-white px-4 py-2.5 rounded-xl border border-slate-200/90 shadow-2xs transition-all"
+          >
+            <Globe className="w-3.5 h-3.5 text-blue-600" />
+            <span>Return to Rachakonda Solutions Homepage</span>
+          </Link>
+        </div>
       </div>
     </div>
   );

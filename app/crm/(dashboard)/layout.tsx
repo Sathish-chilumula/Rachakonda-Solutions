@@ -19,7 +19,10 @@ import {
   FileText,
   BarChart3,
   Search,
-  ChevronRight
+  ChevronRight,
+  Globe,
+  ExternalLink,
+  Phone
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -125,7 +128,7 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
       label: 'Recruitment & Admissions',
       items: [
         { name: 'Dashboard', href: '/crm', icon: LayoutDashboard },
-        { name: 'Staff Hiring (95 Posts)', href: '/crm/candidates', icon: Users, badge: '95 Posts' },
+        { name: 'Staff Hiring', href: '/crm/candidates', icon: Users, badge: '95 Posts' },
         { name: 'Student Admissions', href: '/crm/education', icon: GraduationCap },
         { name: 'All Inquiries', href: '/crm/leads', icon: Briefcase },
       ]
@@ -135,6 +138,15 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
       items: [
         { name: 'Strategic Reports', href: '/crm/reports', icon: BarChart3 },
         { name: 'Audit Trail', href: '/crm/audit', icon: FileText },
+      ]
+    },
+    {
+      label: 'Public Website',
+      items: [
+        { name: 'Website Home', href: '/', icon: Globe, isExternal: true },
+        { name: 'Careers Walk-in Form', href: '/careers', icon: Briefcase, isExternal: true },
+        { name: 'Courses & Programs', href: '/education', icon: GraduationCap, isExternal: true },
+        { name: 'Contact Office', href: '/contact', icon: Phone, isExternal: true },
       ]
     },
     {
@@ -195,32 +207,39 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
                   {group.label}
                 </h3>
                 <nav className="space-y-1">
-                  {group.items.map((item) => {
-                    const isActive = pathname === item.href || (pathname?.startsWith(item.href) && item.href !== '/crm');
+                  {group.items.map((item: any) => {
+                    const isActive = pathname === item.href || (pathname?.startsWith(item.href) && item.href !== '/crm' && !item.isExternal);
                     return (
                       <Link
                         key={item.name}
                         href={item.href}
+                        target={item.isExternal ? "_blank" : undefined}
+                        rel={item.isExternal ? "noopener noreferrer" : undefined}
                         className={cn(
-                          "group flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200",
+                          "group flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-200",
                           isActive 
-                            ? "bg-blue-50/50 text-blue-700 shadow-sm shadow-blue-100/50" 
-                            : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                            ? "bg-blue-50/80 text-blue-700 font-bold shadow-xs border border-blue-200/60" 
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium"
                         )}
                       >
-                        <div className="flex items-center">
+                        <div className="flex items-center min-w-0 pr-2">
                           <item.icon className={cn(
-                            "mr-3.5 h-[18px] w-[18px] transition-colors",
+                            "mr-3 h-[18px] w-[18px] shrink-0 transition-colors",
                             isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
                           )} />
-                          <span className="text-[14px] font-semibold">{item.name}</span>
-                          {(item as any).badge && (
-                            <span className="ml-2 text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs">
-                              {(item as any).badge}
+                          <span className="text-[13px] truncate">{item.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                          {item.badge && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-white shadow-2xs whitespace-nowrap tracking-tight">
+                              {item.badge}
                             </span>
                           )}
+                          {item.isExternal && (
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                          )}
+                          {isActive && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                         </div>
-                        {isActive && <motion.div layoutId="active-nav" className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                       </Link>
                     );
                   })}
@@ -259,39 +278,56 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top header */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-6 sm:px-10 z-30 sticky top-0 shadow-sm shadow-slate-200/20">
-          <div className="flex items-center gap-4">
+        {/* Top header with Live Website links and prominent Sign Out */}
+        <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-4 sm:px-8 z-30 sticky top-0 shadow-sm shadow-slate-200/20">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div className="hidden sm:flex items-center gap-2 text-slate-400">
-              <Search className="w-4 h-4 translate-y-[1px]" />
-              <input 
-                type="text" 
-                placeholder="Global search..." 
-                className="bg-transparent border-none text-sm font-medium focus:ring-0 placeholder:text-slate-400 w-48 md:w-64"
-              />
-            </div>
+
+            {/* Quick Live Site link for easy access */}
+            <Link
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 text-xs font-bold transition-all shadow-2xs group cursor-pointer"
+              title="Open Rachakonda Solutions Public Website in new tab"
+            >
+              <Globe className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Website Home</span>
+              <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-blue-600" />
+            </Link>
+
+            <Link
+              href="/careers"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-all shadow-2xs group cursor-pointer"
+              title="Open Public Walk-in Careers Form"
+            >
+              <Briefcase className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 transition-transform" />
+              <span>Walk-in Form (95 Posts)</span>
+              <ExternalLink className="w-3 h-3 text-amber-600" />
+            </Link>
           </div>
 
-          <div className="flex items-center gap-3 md:gap-6">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isAdmin && (
               <div className="relative">
                 <button 
                   onClick={() => setShowImpersonator(!showImpersonator)}
                   className={cn(
-                    "hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all border-2",
+                    "hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black transition-all border",
                     isImpersonating 
                       ? "bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-200" 
-                      : "text-slate-500 border-slate-100 hover:border-slate-200 bg-white"
+                      : "text-slate-500 border-slate-200 hover:border-slate-300 bg-white"
                   )}
                 >
-                  <Eye className="w-4 h-4" />
-                  {isImpersonating ? `Viewing as ${impersonatedUser.name || impersonatedUser.email}` : "Impersonate"}
+                  <Eye className="w-3.5 h-3.5" />
+                  {isImpersonating ? `Viewing: ${impersonatedUser.name || impersonatedUser.email}` : "Impersonate"}
                 </button>
 
                 <AnimatePresence>
@@ -332,24 +368,32 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
               </div>
             )}
 
-            <div className="h-8 w-[1px] bg-slate-200 hidden md:block" />
+            <div className="h-6 w-[1px] bg-slate-200 hidden sm:block" />
 
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col items-end hidden sm:flex">
-                <span className="text-xs font-bold text-slate-900">{profile?.name || profile?.email}</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                  {role} Access Level
+            {/* User Profile Info */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-700 flex items-center justify-center text-white font-black text-xs shadow-xs">
+                {profile?.name?.charAt(0).toUpperCase() || profile?.email?.charAt(0).toUpperCase() || 'A'}
+              </div>
+              <div className="flex flex-col text-left hidden sm:flex">
+                <span className="text-xs font-extrabold text-slate-900 leading-tight truncate max-w-[140px]">
+                  {profile?.name || profile?.email?.split('@')[0]}
+                </span>
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+                  {role === 'admin' ? 'Super Admin' : role}
                 </span>
               </div>
-              <div className="w-10 h-10 rounded-full border-2 border-slate-100 flex items-center justify-center p-0.5 shadow-sm">
-                <div className="w-full h-full rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
-                   <ShieldCheck className={cn(
-                     "w-5 h-5",
-                     isAdmin ? "text-amber-500" : "text-blue-500"
-                   )} />
-                </div>
-              </div>
             </div>
+
+            {/* TOP-RIGHT PERMANENT SIGN OUT BUTTON (No scrolling down needed!) */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-200 text-xs font-black transition-all shadow-2xs cursor-pointer ml-1"
+              title="Sign out of CRM session"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
           </div>
         </header>
 

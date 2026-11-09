@@ -617,7 +617,7 @@ export default function CandidatesAdminPage() {
                   <th className="py-4 px-4">Applied Date &amp; Time</th>
                   <th className="py-4 px-4">Recruitment Status</th>
                   <th className="py-4 px-4 text-center">Admin Selection Actions</th>
-                  <th className="py-4 px-4 text-right">Details</th>
+                  <th className="py-4 px-4 text-right">Application Slip</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
@@ -859,24 +859,17 @@ export default function CandidatesAdminPage() {
                         </div>
                       </td>
 
-                      {/* Details & Delete View */}
+                      {/* View Application Slip */}
                       <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => setActiveModalCandidate(candidate)}
-                            className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="View Full Application Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setCandidateToDelete(candidate)}
-                            className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            title="Permanently Delete Application"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveModalCandidate(candidate)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-colors cursor-pointer border border-slate-200 shadow-2xs"
+                          title="View Official Application Slip"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-slate-500" />
+                          <span>View Slip</span>
+                        </button>
                       </td>
                     </tr>
                   );
