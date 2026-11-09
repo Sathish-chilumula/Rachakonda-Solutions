@@ -294,6 +294,7 @@ export default function DashboardPage() {
                     <th className="px-6 py-3.5">Candidate</th>
                     <th className="px-4 py-3.5">Applied Position(s)</th>
                     <th className="px-4 py-3.5">Contact</th>
+                    <th className="px-4 py-3.5">Applied Date</th>
                     <th className="px-4 py-3.5">Status</th>
                     <th className="px-6 py-3.5 text-center">Quick Select / Reject</th>
                   </tr>
@@ -345,6 +346,23 @@ export default function DashboardPage() {
                               WA
                             </a>
                           </div>
+                        </td>
+
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className="text-xs font-bold text-slate-800 block">
+                            {new Date(c.createdAt).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            {new Date(c.createdAt).toLocaleTimeString('en-IN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}
+                          </span>
                         </td>
 
                         <td className="px-4 py-4">

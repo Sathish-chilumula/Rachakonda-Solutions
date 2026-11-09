@@ -409,6 +409,7 @@ function LeadsContent() {
                     <th className="py-4 px-4">Applied Role(s)</th>
                     <th className="py-4 px-4">Contact</th>
                     <th className="py-4 px-4">Qualification &amp; Exp</th>
+                    <th className="py-4 px-4">Applied Date</th>
                     <th className="py-4 px-4">Status</th>
                     <th className="py-4 px-4 text-center">Admin Selection Action</th>
                   </tr>
@@ -453,6 +454,30 @@ function LeadsContent() {
                         <td className="py-4 px-4">
                           <p className="text-xs font-bold text-slate-800">{c.qualification}</p>
                           <p className="text-xs text-slate-500">Exp: {c.experience}</p>
+                        </td>
+
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-black text-slate-900">
+                              {new Date(c.createdAt).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </span>
+                            {new Date(c.createdAt).toDateString() === new Date().toDateString() && (
+                              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800">
+                                Today
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-blue-700 font-bold block">
+                            {new Date(c.createdAt).toLocaleTimeString('en-IN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}
+                          </span>
                         </td>
 
                         <td className="py-4 px-4">

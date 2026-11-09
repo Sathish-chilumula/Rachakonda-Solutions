@@ -550,6 +550,7 @@ export default function CandidatesAdminPage() {
                   <th className="py-4 px-4">Contact Info</th>
                   <th className="py-4 px-4">Qual &amp; Experience</th>
                   <th className="py-4 px-4">Address</th>
+                  <th className="py-4 px-4">Applied Date &amp; Time</th>
                   <th className="py-4 px-4">Recruitment Status</th>
                   <th className="py-4 px-4 text-center">Admin Selection Actions</th>
                   <th className="py-4 px-4 text-right">Details</th>
@@ -665,6 +666,33 @@ export default function CandidatesAdminPage() {
                         <p className="text-xs text-slate-600 truncate font-medium" title={candidate.address}>
                           {candidate.address}
                         </p>
+                      </td>
+
+                      {/* Applied Date & Time */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-black text-slate-900">
+                              {new Date(candidate.createdAt).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </span>
+                            {new Date(candidate.createdAt).toDateString() === new Date().toDateString() && (
+                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                Today
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-blue-700 font-bold mt-0.5">
+                            {new Date(candidate.createdAt).toLocaleTimeString('en-IN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Current Status Badge */}
