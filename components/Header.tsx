@@ -200,7 +200,7 @@ export default function Header() {
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center gap-3">
             <Link
-              href="/crm/login"
+              href="/login"
               className={`text-sm font-medium transition-colors ${
                 isLight ? 'text-slate-500 hover:text-slate-900' : 'text-white/80 hover:text-white'
               }`}
