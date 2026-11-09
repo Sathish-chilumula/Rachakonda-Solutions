@@ -6,6 +6,8 @@ import {
   Users,
   CheckCircle2,
   Clock,
+  MessageCircle,
+  PhoneCall,
   XCircle,
   ArrowRight,
   GraduationCap,
@@ -42,6 +44,7 @@ export default function DashboardPage() {
     pendingCandidates: 0,
     rejectedCandidates: 0,
     totalEnrollments: 0,
+    totalCounseling: 0,
   });
   const [activities, setActivities] = useState<any[]>([]);
 
@@ -74,6 +77,12 @@ export default function DashboardPage() {
 
       setStudents(enrollmentData || []);
 
+      // 2.5 Fetch Counseling Inquiries
+      const { count: counselingCount } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .neq('source', 'careers_portal');
+
       // 3. Fetch Audit Logs
       const { data: logs } = await supabase
         .from('audit_logs')
@@ -90,6 +99,7 @@ export default function DashboardPage() {
         pendingCandidates,
         rejectedCandidates,
         totalEnrollments: totalEnrollmentsCount || (enrollmentData?.length || 0),
+        totalCounseling: counselingCount || 0,
       });
     } catch (e) {
       console.error('Error loading CRM dashboard metrics:', e);
@@ -150,6 +160,14 @@ export default function DashboardPage() {
       color: 'purple',
       href: '/crm/education',
     },
+    {
+      label: 'Counseling & Inquiries',
+      value: metrics.totalCounseling,
+      sub: 'From contact & forms',
+      icon: MessageCircle,
+      color: 'teal',
+      href: '/crm/leads?tab=counseling',
+    },
   ];
 
   if (loading) {
@@ -208,7 +226,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Metric Cards Grid ──────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
         {cards.map((card) => (
           <Link
             key={card.label}

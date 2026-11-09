@@ -846,7 +846,7 @@ export default function CareersPage() {
                     <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
                       9. Prior Work Experience?
                     </label>
-                    <div className="flex items-center gap-6 mb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-6 mb-3">
                       <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
                         <input
                           type="radio"

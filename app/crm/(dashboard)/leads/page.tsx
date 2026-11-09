@@ -241,6 +241,27 @@ function LeadsContent() {
     a.click();
   };
 
+  const handleExportCounseling = () => {
+    if (counselingLeads.length === 0) return alert('No inquiries to export.');
+    const headers = ['S.No', 'Visitor Name', 'Phone', 'Subject', 'Details / Message', 'Status', 'Date'];
+    const rows = counselingLeads.map((l, idx) => [
+      `"${idx + 1}"`,
+      `"${l.name || ''}"`,
+      `"${l.phone || ''}"`,
+      `"${l.designation || 'General'}"`,
+      `"${(l.remarks || '').replace(/"/g, '""')}"`,
+      `"${l.status || 'new'}"`,
+      `"${new Date(l.created_at).toLocaleDateString('en-IN')}"`,
+    ]);
+    const csv = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Rachakonda_Counseling_Inquiries_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
   // Filtered views
   const filteredCandidates = useMemo(() => {
     return candidates.filter((c) => {
@@ -337,7 +358,14 @@ function LeadsContent() {
               >
                 <FileDown className="w-4 h-4" /> Export Students ({filteredStudents.length})
               </button>
-            ) : null}
+            ) : (
+              <button
+                onClick={handleExportCounseling}
+                className="h-11 px-5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer"
+              >
+                <FileDown className="w-4 h-4" /> Export Inquiries ({filteredCounseling.length})
+              </button>
+            )}
           </div>
         </div>
 
@@ -654,40 +682,96 @@ function LeadsContent() {
                 <thead>
                   <tr className="bg-slate-50/80 text-[11px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
                     <th className="py-4 px-4">Visitor Name</th>
-                    <th className="py-4 px-4">Inquiry / Subject</th>
-                    <th className="py-4 px-4">Contact</th>
-                    <th className="py-4 px-4">Location / Message</th>
-                    <th className="py-4 px-4">Status</th>
-                    <th className="py-4 px-4 text-center">Action</th>
+                    <th className="py-4 px-4">Inquiry Subject</th>
+                    <th className="py-4 px-4">Contact Info</th>
+                    <th className="py-4 px-4">Message / Details</th>
+                    <th className="py-4 px-4">Received Date</th>
+                    <th className="py-4 px-4">Inquiry Status</th>
+                    <th className="py-4 px-4 text-center">Manage</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {filteredCounseling.map((l) => (
-                    <tr key={l.id} className="hover:bg-slate-50/70">
-                      <td className="py-4 px-4 font-bold text-slate-900">{l.name}</td>
-                      <td className="py-4 px-4 text-xs font-bold text-blue-900">{l.designation || 'General Counseling'}</td>
-                      <td className="py-4 px-4 text-xs font-semibold">
-                        <a href={`tel:${l.phone}`} className="hover:text-blue-600">{l.phone}</a>
-                      </td>
-                      <td className="py-4 px-4 text-xs text-slate-600 max-w-sm truncate" title={l.remarks}>
-                        {l.remarks}
+                    <tr key={l.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-4 px-4 font-bold text-slate-900">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 font-extrabold text-xs flex items-center justify-center shrink-0">
+                            {l.name ? l.name.charAt(0).toUpperCase() : 'V'}
+                          </div>
+                          <span>{l.name}</span>
+                        </div>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 capitalize">
-                          {l.status}
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200/60">
+                          {l.designation || 'General Counseling'}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-center">
+                      <td className="py-4 px-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <a href={`tel:${l.phone}`} className="font-bold text-slate-900 hover:text-blue-600 text-xs flex items-center gap-1">
+                              <Phone className="w-3.5 h-3.5 text-slate-400" />
+                              {l.phone}
+                            </a>
+                            <a
+                              href={`https://wa.me/91${(l.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(
+                                `Hello ${l.name}, Greetings from Rachakonda Solutions regarding your counseling inquiry.`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                              title="Chat on WhatsApp"
+                            >
+                              <MessageSquare className="w-3 h-3" /> WhatsApp
+                            </a>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-xs text-slate-600 max-w-xs">
+                        <p className="line-clamp-2 leading-relaxed" title={l.remarks}>
+                          {l.remarks || 'No additional message.'}
+                        </p>
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-800">
+                            {new Date(l.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                          {new Date(l.created_at).toDateString() === new Date().toDateString() && (
+                            <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
                         <select
-                          value={l.status}
+                          value={l.status || 'new'}
                           onChange={(e) => handleCounselingStatus(l.id, e.target.value)}
-                          className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1"
+                          className={`text-xs font-bold rounded-lg px-2.5 py-1 border transition-colors cursor-pointer ${
+                            l.status === 'converted'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : l.status === 'contacted'
+                              ? 'bg-amber-50 text-amber-800 border-amber-300'
+                              : 'bg-blue-50 text-blue-800 border-blue-200'
+                          }`}
                         >
-                          <option value="new">New</option>
-                          <option value="contacted">Contacted</option>
-                          <option value="converted">Resolved</option>
-                          <option value="rejected">Archived</option>
+                          <option value="new">New 🔵</option>
+                          <option value="contacted">Contacted 🟡</option>
+                          <option value="converted">Resolved 🟢</option>
+                          <option value="rejected">Archived ⚪</option>
                         </select>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setCandidateToDelete({ id: l.id, name: l.name, phone: l.phone, rolesString: l.designation || 'Inquiry', refId: 'INQUIRY' })}
+                          className="px-2.5 py-1 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1 mx-auto"
+                          title="Delete inquiry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
                       </td>
                     </tr>
                   ))}

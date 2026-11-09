@@ -306,7 +306,7 @@ export default function Home() {
 
       {/* ═══ QUICK ACTIONS (5-COLUMN NATIVE APP LAUNCHER GRID) ═══════════════ */}
       <section className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-30 mb-12 sm:mb-16">
-        <div className="grid grid-cols-5 gap-1.5 sm:gap-3 lg:gap-4">
+        <div className="flex overflow-x-auto sm:grid sm:grid-cols-5 gap-2.5 sm:gap-4 pb-2 sm:pb-0 scrollbar-none">
           {quickActions.map((action, i) => (
             <motion.div
               key={action.label}
@@ -316,7 +316,7 @@ export default function Home() {
             >
               <Link
                 href={action.href}
-                className={`flex flex-col items-center gap-1.5 sm:gap-3 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border bg-white shadow-md sm:shadow-lg shadow-slate-200/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group active:scale-95 ${action.hover}`}
+                className={`flex flex-col items-center gap-1.5 sm:gap-3 p-3 sm:p-5 rounded-2xl sm:rounded-3xl border bg-white shadow-md sm:shadow-lg shadow-slate-200/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group active:scale-95 min-w-[95px] sm:min-w-0 flex-1 ${action.hover}`}
               >
                 <div className={`w-10 h-10 sm:w-13 sm:h-13 rounded-xl sm:rounded-2xl ${action.color} flex items-center justify-center border group-hover:bg-white/20 group-hover:border-white/30 transition-colors`}>
                   <action.icon className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -418,7 +418,7 @@ export default function Home() {
           </div>
 
           {/* Path Cards (2 Columns on Mobile for App Feel!) */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6 mb-8 sm:mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-6 mb-8 sm:mb-10">
             <AnimatePresence mode="wait">
               {currentStage.paths.map((path, i) => (
                 <motion.div

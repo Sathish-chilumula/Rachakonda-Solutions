@@ -48,11 +48,11 @@ export default function ExitIntentPopup() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          phone,
+          name: name.trim(),
+          phone: phone.trim(),
           state: 'Telangana',
-          subject: Counseling Inquiry: ,
-          message: User requested free career counseling for: ,
+          subject: `Counseling Inquiry: ${interest}`,
+          message: `User requested free career counseling for: ${interest}`,
         }),
       });
       setSubmitted(true);

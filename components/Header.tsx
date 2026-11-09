@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ChevronDown, GraduationCap, MapPin, Phone, MessageCircle, Building2, BookOpen, Gift, Briefcase } from 'lucide-react';
+import { Menu, X, ChevronDown, GraduationCap, MapPin, Phone, MessageCircle, Building2, BookOpen, Gift, Briefcase, User, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const navGroups = [
@@ -216,8 +216,21 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Mobile Controls (Clean App-Like Header) */}
-          <div className="flex lg:hidden items-center gap-2">
+          {/* Mobile Controls with dedicated Login Button */}
+          <div className="flex lg:hidden items-center gap-1.5 sm:gap-2">
+            <Link
+              href="/crm/login"
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold active:scale-95 transition-all ${
+                isLight
+                  ? 'bg-blue-50/90 hover:bg-blue-100 border-blue-200 text-blue-700 shadow-2xs'
+                  : 'bg-white/15 hover:bg-white/25 border-white/25 text-white'
+              }`}
+              title="Staff & Admin CRM Login"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Login</span>
+            </Link>
+
             <a
               href="tel:+919640333313"
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 active:scale-95 transition-transform"
@@ -286,12 +299,12 @@ export default function Header() {
                 </span>
               </Link>
 
-              {/* Quick App Shortcut Grid */}
-              <div className="grid grid-cols-5 gap-1.5 pt-1 pb-2">
+              {/* Quick App Shortcut Grid (Proper spacing on mobile, no squishing!) */}
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 pt-1 pb-2">
                 {[
                   { label: 'Colleges', href: '/colleges', icon: Building2, color: 'text-blue-600 bg-blue-50' },
                   { label: 'Exams', href: '/exams', icon: BookOpen, color: 'text-teal-600 bg-teal-50' },
-                  { label: 'Careers', href: '/careers', icon: Briefcase, color: 'text-amber-600 bg-amber-50' },
+                  { label: 'Careers (95)', href: '/careers', icon: Briefcase, color: 'text-amber-700 bg-amber-50 border border-amber-200' },
                   { label: 'Scholarships', href: '/scholarships', icon: Gift, color: 'text-purple-600 bg-purple-50' },
                   { label: 'Govt Jobs', href: '/government-jobs', icon: Briefcase, color: 'text-slate-600 bg-slate-100' },
                 ].map((item) => (
@@ -299,12 +312,12 @@ export default function Header() {
                     key={item.label}
                     href={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex flex-col items-center p-1.5 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 active:scale-95 transition-all text-center"
+                    className="flex flex-col items-center p-2 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 active:scale-95 transition-all text-center min-w-0"
                   >
-                    <div className={`w-7 h-7 rounded-lg ${item.color} flex items-center justify-center mb-1`}>
-                      <item.icon className="w-3.5 h-3.5" />
+                    <div className={`w-8 h-8 rounded-xl ${item.color} flex items-center justify-center mb-1 shrink-0`}>
+                      <item.icon className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-700 truncate w-full">{item.label}</span>
+                    <span className="text-[11px] font-bold text-slate-800 truncate w-full">{item.label}</span>
                   </Link>
                 ))}
               </div>
@@ -391,6 +404,16 @@ export default function Header() {
                     <MessageCircle className="w-3.5 h-3.5" /> WhatsApp Support
                   </a>
                 </div>
+
+                {/* Staff & Admin Login Card in Mobile Drawer */}
+                <Link
+                  href="/crm/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full text-center py-2.5 text-xs font-bold text-blue-900 bg-blue-50/80 hover:bg-blue-100 rounded-xl flex items-center justify-center gap-2 border border-blue-200 transition-colors"
+                >
+                  <Lock className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Staff &amp; Admin CRM Login</span>
+                </Link>
               </div>
             </div>
           </motion.div>
