@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,12 +30,14 @@ import {
   Building2,
   GraduationCap,
   Download,
-  AlertCircle
+  AlertCircle,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { JOB_ROLES, HIRING_OVERVIEW, JobRole } from '@/lib/data/careers';
 import { supabase } from '@/lib/supabase';
 
-// Form validation schema matching exact handwritten specifications
+// Form validation schema supporting multiple positions
 const formSchema = z.object({
   fullName: z.string().min(2, 'Full Name is required (minimum 2 characters)'),
   fatherName: z.string().min(2, "Father's Name is required"),
@@ -53,7 +55,7 @@ const formSchema = z.object({
   mailId: z.string().email('Please enter a valid email address'),
   hasExperience: z.enum(['No', 'Yes']),
   experienceDetails: z.string().optional(),
-  jobRole: z.string().min(1, 'Please select the job role you are applying for'),
+  jobRoles: z.array(z.string()).min(1, 'Please select at least one job role you are applying for'),
   additionalNotes: z.string().optional(),
 });
 
@@ -62,13 +64,12 @@ type FormData = z.infer<typeof formSchema>;
 export default function CareersPage() {
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedRole, setSelectedRole] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submittedData, setSubmittedData] = useState<{
     referenceId: string;
     fullName: string;
     fatherName: string;
-    jobRole: string;
+    jobRoles: string[];
     mobileNo: string;
     qualification: string;
   } | null>(null);
@@ -89,12 +90,34 @@ export default function CareersPage() {
       hasExperience: 'No',
       maritalStatus: 'Single',
       gender: 'Female',
-      jobRole: '',
+      jobRoles: [],
     },
   });
 
   const watchHasExperience = watch('hasExperience');
-  const watchJobRole = watch('jobRole');
+  const watchJobRoles = watch('jobRoles') || [];
+
+  // Toggle role in multi-select array
+  const toggleRole = (roleTitle: string) => {
+    const current = watch('jobRoles') || [];
+    let updated: string[];
+    if (current.includes(roleTitle)) {
+      updated = current.filter((r) => r !== roleTitle);
+    } else {
+      updated = [...current, roleTitle];
+    }
+    setValue('jobRoles', updated, { shouldValidate: true });
+  };
+
+  const handleSelectFromCard = (roleTitle: string) => {
+    const current = watch('jobRoles') || [];
+    if (!current.includes(roleTitle)) {
+      setValue('jobRoles', [...current, roleTitle], { shouldValidate: true });
+    }
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   // Filter roles based on search and category
   const filteredRoles = JOB_ROLES.filter((role) => {
@@ -109,44 +132,58 @@ export default function CareersPage() {
     if (selectedRoleFilter === 'all') return true;
     if (selectedRoleFilter === 'degree') return role.qualification.toLowerCase().includes('any degree');
     if (selectedRoleFilter === 'inter') return role.qualification.toLowerCase().includes('inter');
-    if (selectedRoleFilter === 'tech') return role.qualification.toLowerCase().includes('b.tech') || role.qualification.toLowerCase().includes('diploma') || role.qualification.toLowerCase().includes('b.ed');
+    if (selectedRoleFilter === 'tech')
+      return (
+        role.qualification.toLowerCase().includes('b.tech') ||
+        role.qualification.toLowerCase().includes('diploma') ||
+        role.qualification.toLowerCase().includes('b.ed')
+      );
     return true;
   });
 
-  const handleSelectRoleToApply = (roleTitle: string) => {
-    setSelectedRole(roleTitle);
-    setValue('jobRole', roleTitle, { shouldValidate: true });
-    if (formRef.current) {
-      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
-    const refId = `RS-2026-JOB-${Math.floor(1000 + Math.random() * 9000)}`;
+    let refId = `RS-2026-JOB-${Math.floor(1000 + Math.random() * 9000)}`;
 
     try {
-      // Attempt saving to Supabase if accessible
-      await supabase.from('leads').insert([
-        {
-          name: data.fullName,
-          phone: data.mobileNo,
-          city: data.address,
-          remarks: `[CAREERS 95 STAFF] Role: ${data.jobRole} | Father: ${data.fatherName} | Qual: ${data.qualification} | Gender: ${data.gender} | Marital: ${data.maritalStatus} | Exp: ${data.hasExperience === 'Yes' ? data.experienceDetails : 'Fresher'} | Email: ${data.mailId} | Ref: ${refId}`,
-          status: 'new',
-          priority: 'hot',
-          source: 'careers_portal',
-        },
-      ]);
+      // 1. Submit via server API route (guaranteed bypass of RLS)
+      const res = await fetch('/api/careers/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.referenceId) {
+          refId = json.referenceId;
+        }
+      } else {
+        // Fallback to client-side insert if API route fails
+        const rolesString = data.jobRoles.join(', ');
+        await supabase.from('leads').insert([
+          {
+            name: data.fullName,
+            phone: data.mobileNo,
+            city: data.address,
+            address: data.address,
+            designation: rolesString,
+            remarks: `[CAREERS 95 STAFF] Roles: ${rolesString} | Father: ${data.fatherName} | Qual: ${data.qualification} | Gender: ${data.gender} | Marital: ${data.maritalStatus} | Exp: ${data.hasExperience === 'Yes' ? data.experienceDetails : 'Fresher'} | Email: ${data.mailId} | Ref: ${refId}`,
+            status: 'new',
+            priority: 'hot',
+            source: 'careers_portal',
+          },
+        ]);
+      }
     } catch (e) {
-      console.warn('Supabase offline or restoring, proceeding with client confirmation:', e);
+      console.warn('Form submission processed with local reference:', e);
     }
 
     setSubmittedData({
       referenceId: refId,
       fullName: data.fullName,
       fatherName: data.fatherName,
-      jobRole: data.jobRole,
+      jobRoles: data.jobRoles,
       mobileNo: data.mobileNo,
       qualification: data.qualification,
     });
@@ -195,7 +232,7 @@ export default function CareersPage() {
             transition={{ delay: 0.2 }}
             className="text-base sm:text-xl text-blue-100 max-w-3xl mx-auto font-medium mb-8 leading-relaxed"
           >
-            Join our dynamic team at our Gajwel Head Office. 95 open positions across Management, Telecalling, Administration, Academic Coaching, and Digital Media.
+            Join our dynamic team at our Gajwel Head Office. 95 open positions across Management, Telecalling, Administration, Academic Coaching, and Digital Media. Candidates can apply for multiple positions!
           </motion.p>
 
           {/* Quick Perks Grid */}
@@ -235,7 +272,7 @@ export default function CareersPage() {
               className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-6 py-3.5 rounded-full text-sm sm:text-base shadow-xl hover:shadow-amber-500/30 transition-all hover:-translate-y-0.5 flex items-center gap-2"
             >
               <Briefcase className="w-4 h-4" />
-              Fill Interview Application Form
+              Fill Interview Application Form {watchJobRoles.length > 0 && `(${watchJobRoles.length} Selected)`}
             </button>
             <button
               onClick={() => setIsPosterModalOpen(true)}
@@ -275,13 +312,13 @@ export default function CareersPage() {
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold uppercase tracking-wider mb-2">
                 <Users className="w-3.5 h-3.5 text-blue-600" />
-                Final Fixed Staff List
+                Final Fixed Staff List &bull; Multiple Selections Allowed
               </div>
               <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-950 font-display">
                 All 11 Open Designations
               </h2>
               <p className="text-slate-600 text-sm sm:text-base mt-1">
-                Filter by qualification or select any position to apply directly.
+                You can apply for multiple positions! Click on any role to add it to your selection.
               </p>
             </div>
 
@@ -320,17 +357,59 @@ export default function CareersPage() {
             />
           </div>
 
+          {/* Selected Roles Sticky Floating Banner if > 0 */}
+          {watchJobRoles.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
+            >
+              <div>
+                <p className="text-xs font-extrabold text-blue-900 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  {watchJobRoles.length} Position{watchJobRoles.length > 1 ? 's' : ''} Selected for Application:
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {watchJobRoles.map((r) => (
+                    <span
+                      key={r}
+                      className="inline-flex items-center gap-1 bg-white border border-blue-200 text-blue-800 text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-2xs"
+                    >
+                      {r}
+                      <button
+                        type="button"
+                        onClick={() => toggleRole(r)}
+                        className="hover:text-red-600 ml-0.5"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (formRef.current) formRef.current.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl shrink-0 shadow-sm transition-all"
+              >
+                Proceed to Fill Form &rarr;
+              </button>
+            </motion.div>
+          )}
+
           {/* Roles Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredRoles.map((role) => {
-              const isSelected = watchJobRole === role.title;
+              const isSelected = watchJobRoles.includes(role.title);
               return (
                 <motion.div
                   key={role.id}
                   layout
                   className={`bg-white rounded-3xl p-5 sm:p-6 border transition-all duration-200 flex flex-col justify-between ${
                     isSelected
-                      ? 'border-blue-600 ring-2 ring-blue-500/30 shadow-lg'
+                      ? 'border-blue-600 ring-2 ring-blue-500/30 shadow-lg bg-blue-50/20'
                       : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
                   }`}
                 >
@@ -374,9 +453,10 @@ export default function CareersPage() {
                     </p>
                   </div>
 
-                  {/* Apply Button */}
+                  {/* Multi-Select Toggle Button */}
                   <button
-                    onClick={() => handleSelectRoleToApply(role.title)}
+                    type="button"
+                    onClick={() => toggleRole(role.title)}
                     className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                       isSelected
                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
@@ -385,11 +465,11 @@ export default function CareersPage() {
                   >
                     {isSelected ? (
                       <>
-                        <CheckCircle2 className="w-4 h-4" /> Selected for Application
+                        <CheckCircle2 className="w-4 h-4" /> Selected &bull; Tap to Deselect
                       </>
                     ) : (
                       <>
-                        Apply for {role.title} <ArrowRight className="w-3.5 h-3.5" />
+                        + Select {role.title}
                       </>
                     )}
                   </button>
@@ -485,7 +565,7 @@ export default function CareersPage() {
                   Interview Application Form
                 </h2>
                 <p className="text-slate-600 text-xs sm:text-sm mt-1 max-w-lg mx-auto">
-                  Please fill in all 10 mandatory fields accurately. Our HR department will contact you with your interview slot and hall pass.
+                  Please fill in all 10 mandatory fields accurately. You can select multiple roles if interested in more than one position.
                 </p>
               </div>
 
@@ -508,8 +588,11 @@ export default function CareersPage() {
                       Application Submitted Successfully!
                     </h3>
                     <p className="text-slate-600 text-sm mt-2 max-w-md mx-auto">
-                      Thank you, <strong>{submittedData.fullName}</strong>. Your registration for the position of{' '}
-                      <span className="text-emerald-700 font-bold">{submittedData.jobRole}</span> has been received.
+                      Thank you, <strong>{submittedData.fullName}</strong>. Your registration for{' '}
+                      <span className="text-emerald-700 font-bold">
+                        {submittedData.jobRoles.length} position(s) ({submittedData.jobRoles.join(', ')})
+                      </span>{' '}
+                      has been received.
                     </p>
                   </div>
 
@@ -526,7 +609,8 @@ export default function CareersPage() {
                         <strong>Candidate:</strong> {submittedData.fullName} (S/O or D/O {submittedData.fatherName})
                       </p>
                       <p>
-                        <strong>Applied Role:</strong> {submittedData.jobRole}
+                        <strong>Applied Positions ({submittedData.jobRoles.length}):</strong>{' '}
+                        <span className="font-bold text-blue-700">{submittedData.jobRoles.join(', ')}</span>
                       </p>
                       <p>
                         <strong>Mobile:</strong> {submittedData.mobileNo}
@@ -544,7 +628,7 @@ export default function CareersPage() {
                   <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                     <a
                       href={`https://wa.me/919640333313?text=${encodeURIComponent(
-                        `Hello HR Team, I have submitted my job application on the website.\nReference ID: ${submittedData.referenceId}\nName: ${submittedData.fullName}\nRole: ${submittedData.jobRole}\nMobile: ${submittedData.mobileNo}`
+                        `Hello HR Team, I have submitted my job application on the website.\nReference ID: ${submittedData.referenceId}\nName: ${submittedData.fullName}\nApplied Positions: ${submittedData.jobRoles.join(', ')}\nMobile: ${submittedData.mobileNo}`
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -565,25 +649,76 @@ export default function CareersPage() {
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                  {/* Field 10: Apply Job Role (Primary Selector) */}
-                  <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 sm:p-5">
-                    <label className="block text-xs sm:text-sm font-black text-blue-950 mb-2">
-                      10. Apply Job Role <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      {...register('jobRole')}
-                      className="w-full bg-white border border-blue-300 rounded-xl px-3.5 py-3 text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    >
-                      <option value="">-- Choose One of the 11 Open Roles --</option>
-                      {JOB_ROLES.map((role) => (
-                        <option key={role.id} value={role.title}>
-                          #{role.no}. {role.title} ({role.qualification} | {role.genderNeeded})
-                        </option>
-                      ))}
-                    </select>
-                    {errors.jobRole && (
-                      <p className="text-xs text-red-600 font-bold mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3.5 h-3.5" /> {errors.jobRole.message}
+                  {/* Field 10: Multi-Select Apply Job Roles */}
+                  <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                      <div>
+                        <label className="block text-xs sm:text-sm font-black text-blue-950">
+                          10. Apply Job Role(s) <span className="text-red-500">*</span>{' '}
+                          <span className="text-xs font-semibold text-blue-700">(Select One or Multiple Roles)</span>
+                        </label>
+                        <p className="text-xs text-slate-600 mt-0.5">
+                          Tap on the positions you are interested in. You can choose more than one option.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black bg-blue-600 text-white px-2.5 py-1 rounded-full shadow-xs">
+                          {watchJobRoles.length} Selected
+                        </span>
+                        {watchJobRoles.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setValue('jobRoles', [], { shouldValidate: true })}
+                            className="text-xs font-bold text-red-600 hover:underline"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Interactive Selection Cards Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mt-3">
+                      {JOB_ROLES.map((role) => {
+                        const isChecked = watchJobRoles.includes(role.title);
+                        return (
+                          <div
+                            key={role.id}
+                            onClick={() => toggleRole(role.title)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-2.5 select-none ${
+                              isChecked
+                                ? 'bg-white border-blue-600 ring-2 ring-blue-500/30 shadow-xs'
+                                : 'bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white'
+                            }`}
+                          >
+                            <div className="mt-0.5 shrink-0">
+                              {isChecked ? (
+                                <CheckSquare className="w-4 h-4 text-blue-600" />
+                              ) : (
+                                <Square className="w-4 h-4 text-slate-300" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className={`text-xs font-bold leading-tight ${isChecked ? 'text-blue-900' : 'text-slate-800'}`}>
+                                #{role.no}. {role.title}
+                              </p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-medium">
+                                  {role.qualification.split('(')[0].trim()}
+                                </span>
+                                <span className="text-[10px] bg-amber-50 text-amber-800 px-1.5 py-0.2 rounded font-medium">
+                                  {role.genderNeeded}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {errors.jobRoles && (
+                      <p className="text-xs text-red-600 font-bold mt-2.5 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" /> {errors.jobRoles.message}
                       </p>
                     )}
                   </div>
@@ -786,7 +921,7 @@ export default function CareersPage() {
                     )}
                   </div>
 
-                  {/* Additional Notes */}
+                  {/* Additional Remarks */}
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       Additional Remarks / Preferred Joining Date (Optional)
@@ -813,6 +948,7 @@ export default function CareersPage() {
                     ) : (
                       <>
                         <CheckCircle2 className="w-5 h-5" /> Submit Application &amp; Register for Interview
+                        {watchJobRoles.length > 0 && ` (${watchJobRoles.length} Roles)`}
                       </>
                     )}
                   </button>

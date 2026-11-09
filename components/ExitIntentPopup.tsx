@@ -44,14 +44,17 @@ export default function ExitIntentPopup() {
     
     setSubmitting(true);
     try {
-      await supabase.from('leads').insert([{
-        name,
-        phone,
-        loan_type: interest,
-        status: 'new',
-        source: 'exit_popup',
-        priority: 'hot',
-      }]);
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          state: 'Telangana',
+          subject: Counseling Inquiry: ,
+          message: User requested free career counseling for: ,
+        }),
+      });
       setSubmitted(true);
     } catch {
       // Silent fail — don't block user

@@ -16,7 +16,7 @@ interface ReportMetrics {
   enrolledCount: number;
   conversionRate: number;
   agentPerformance: { name: string; email: string; assigned: number; converted: number; pending: number }[];
-  recentLeads: { name: string; loan_type: string; status: string; city: string; created_at: string }[];
+  recentLeads: { name: string; role: string; status: string; city: string; created_at: string }[];
 }
 
 export default function ReportsPage() {
@@ -64,7 +64,7 @@ export default function ReportsPage() {
       agentPerformance,
       recentLeads: allLeads.slice(0, 10).map(l => ({
         name: l.name,
-        loan_type: l.loan_type,
+        role: l.designation || 'Inquiry',
         status: l.status,
         city: l.city || 'N/A',
         created_at: l.created_at,
@@ -129,7 +129,7 @@ export default function ReportsPage() {
           <div class="kpis">
             <div class="kpi">
               <div class="kpi-value">${metrics?.totalLeads || 0}</div>
-              <div class="kpi-label">Total Finance Leads</div>
+              <div class="kpi-label">Total Applicants & Inquiries</div>
             </div>
             <div class="kpi">
               <div class="kpi-value">${metrics?.convertedLeads || 0}</div>
@@ -172,12 +172,12 @@ export default function ReportsPage() {
 
           <h2>Recent Leads (Last 10)</h2>
           <table>
-            <thead><tr><th>Name</th><th>Loan Type</th><th>City</th><th>Status</th><th>Date</th></tr></thead>
+            <thead><tr><th>Name</th><th>Position / Inquiry</th><th>City</th><th>Status</th><th>Date</th></tr></thead>
             <tbody>
               ${metrics?.recentLeads.map(l => `
                 <tr>
                   <td>${l.name}</td>
-                  <td style="text-transform:capitalize">${l.loan_type?.replace(/-/g, ' ') || 'N/A'}</td>
+                  <td>${l.role || 'N/A'}</td>
                   <td>${l.city}</td>
                   <td><span class="badge badge-${l.status}">${l.status}</span></td>
                   <td>${format(new Date(l.created_at), 'MMM d, yyyy')}</td>
@@ -201,7 +201,7 @@ export default function ReportsPage() {
   };
 
   const kpiCards = metrics ? [
-    { label: 'Finance Leads', value: metrics.totalLeads, icon: Briefcase, color: 'blue' },
+    { label: 'Total Inquiries', value: metrics.totalLeads, icon: Briefcase, color: 'blue' },
     { label: 'Converted', value: metrics.convertedLeads, icon: CheckCircle2, color: 'emerald' },
     { label: 'Conversion Rate', value: `${metrics.conversionRate}%`, icon: TrendingUp, color: 'purple' },
     { label: 'Enrollments', value: metrics.totalEnrollments, icon: GraduationCap, color: 'amber' },
@@ -210,7 +210,7 @@ export default function ReportsPage() {
   const reports = [
     { title: 'Monthly Lead Conversion', type: 'Lead Conversion', icon: TrendingUp, color: 'text-blue-600', bgColor: 'bg-blue-50' },
     { title: 'Agent Efficiency Ledger', type: 'Agent Performance', icon: Users, color: 'text-purple-600', bgColor: 'bg-purple-50' },
-    { title: 'Financial Pipeline Forecast', type: 'Pipeline Forecast', icon: Briefcase, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
+    { title: 'Staff Recruitment Funnel', type: 'Recruitment Funnel', icon: Briefcase, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
     { title: 'Education Enrollment Report', type: 'Education Enrollment', icon: GraduationCap, color: 'text-amber-600', bgColor: 'bg-amber-50' },
   ];
 

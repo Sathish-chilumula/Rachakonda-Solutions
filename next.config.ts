@@ -21,6 +21,20 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  async redirects() {
+    return [
+      {
+        source: '/login',
+        destination: '/crm/login',
+        permanent: true,
+      },
+      {
+        source: '/crm/finance',
+        destination: '/crm/candidates',
+        permanent: true,
+      },
+    ];
+  },
   transpilePackages: ['framer-motion'],
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.

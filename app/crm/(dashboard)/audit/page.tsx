@@ -92,7 +92,7 @@ export default function AuditLogsPage() {
              className="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-500 outline-none hover:border-slate-300 transition-colors shadow-sm"
            >
              <option value="all">Every Object</option>
-             <option value="lead">Finance Leads</option>
+             <option value="lead">Candidates & Inquiries</option>
              <option value="enrollment">Edu Enrollments</option>
              <option value="profile">User Accounts</option>
            </select>

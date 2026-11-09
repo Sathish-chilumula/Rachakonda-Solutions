@@ -50,6 +50,31 @@ function EducationContent() {
     if (!error) fetchData();
   };
 
+  const handleExportCSV = () => {
+    if (filteredData.length === 0) {
+      alert('No enrollments to export.');
+      return;
+    }
+    const headers = ['S.No', 'Student Name', 'Mobile Number', 'Email Address', 'Course Enrolled', 'Category', 'Status', 'Date Registered'];
+    const rows = filteredData.map((d: any, idx: number) => [
+      `"${idx + 1}"`,
+      `"${d.name || ''}"`,
+      `"${d.phone || ''}"`,
+      `"${d.email || ''}"`,
+      `"${d.course_name || ''}"`,
+      `"${d.category || ''}"`,
+      `"${d.status === 'converted' ? 'Enrolled / Paid' : d.status}"`,
+      `"${new Date(d.created_at).toLocaleDateString('en-IN')}"`
+    ]);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Rachakonda_Student_Admissions_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this enrollment?')) return;
     const { error } = await supabase.from('enrollments').delete().eq('id', id);
@@ -75,7 +100,7 @@ function EducationContent() {
     switch(status) {
       case 'new': return 'bg-blue-50 text-blue-700';
       case 'contacted': return 'bg-amber-50 text-amber-700';
-      case 'enrolled': return 'bg-emerald-50 text-emerald-700';
+      case 'converted': case 'enrolled': return 'bg-emerald-50 text-emerald-700';
       case 'rejected': return 'bg-red-50 text-red-700';
       default: return 'bg-slate-50 text-slate-700';
     }
@@ -96,15 +121,15 @@ function EducationContent() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="h-12 px-6 rounded-2xl bg-white border border-slate-200 text-sm font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 shadow-sm transition-all flex items-center gap-2">
+          <button onClick={handleExportCSV} className="h-12 px-6 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-black uppercase tracking-widest shadow-md transition-all flex items-center gap-2 cursor-pointer">
              <FileDown className="w-4 h-4" />
-             Export
+             Export CSV ({filteredData.length})
           </button>
         </div>
       </div>
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {['new', 'contacted', 'enrolled', 'rejected'].map((s) => {
+        {['new', 'contacted', 'converted', 'rejected'].map((s) => {
           const count = data.filter(d => d.status === s).length;
           const isActive = statusFilter === s;
           return (

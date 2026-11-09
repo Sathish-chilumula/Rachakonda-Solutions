@@ -122,33 +122,21 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
 
   const menuGroups = [
     {
-      label: 'Performance',
+      label: 'Recruitment & Admissions',
       items: [
         { name: 'Dashboard', href: '/crm', icon: LayoutDashboard },
+        { name: 'Staff Hiring (95 Posts)', href: '/crm/candidates', icon: Users, badge: '95 Posts' },
+        { name: 'Student Admissions', href: '/crm/education', icon: GraduationCap },
+        { name: 'All Inquiries', href: '/crm/leads', icon: Briefcase },
+      ]
+    },
+    {
+      label: 'Operations & Reports',
+      items: [
         { name: 'Strategic Reports', href: '/crm/reports', icon: BarChart3 },
-      ]
-    },
-    {
-      label: 'Business Units',
-      items: [
-        { name: 'Website Leads', href: '/crm/leads', icon: Briefcase },
-        { name: 'Education Portal', href: '/crm/education', icon: GraduationCap },
-      ]
-    },
-    {
-      label: 'Client Database',
-      items: [
-        { name: 'All Clients', href: '/crm/clients', icon: Users },
-        { name: 'Manual Lead', href: '/crm/leads/new', icon: Eye },
-      ]
-    },
-    ...(isStaff ? [{
-      label: 'Operations',
-      items: [
-        { name: 'Excel Sync', href: '/crm/upload', icon: UploadCloud },
         { name: 'Audit Trail', href: '/crm/audit', icon: FileText },
       ]
-    }] : []),
+    },
     {
       label: 'Personal',
       items: [
@@ -226,6 +214,11 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
                             isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
                           )} />
                           <span className="text-[14px] font-semibold">{item.name}</span>
+                          {(item as any).badge && (
+                            <span className="ml-2 text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs">
+                              {(item as any).badge}
+                            </span>
+                          )}
                         </div>
                         {isActive && <motion.div layoutId="active-nav" className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                       </Link>

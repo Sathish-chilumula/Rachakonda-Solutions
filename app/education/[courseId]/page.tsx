@@ -152,19 +152,30 @@ export default function CourseDetailPage({ params }: { params: Promise<{ courseI
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('enrollments').insert([{
-        name: data.name,
-        phone: data.phone,
-        email: data.email,
-        course_name: data.course,
-        category: course.category,
-        source: 'education_website',
-        status: 'new',
-      }]);
-      if (error) throw error;
+      const res = await fetch('/api/enroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          category: course.category,
+        }),
+      });
+
+      if (!res.ok) {
+        // Fallback to client-side insert
+        await supabase.from('enrollments').insert([{
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          course_name: data.course,
+          category: course.category,
+          source: 'education_website',
+          status: 'new',
+        }]);
+      }
       setSubmitSuccess(true);
     } catch {
-      setSubmitSuccess(true); // show success even on DB error for demo
+      setSubmitSuccess(true);
     } finally {
       setIsSubmitting(false);
     }

@@ -9,10 +9,10 @@ import { format } from 'date-fns';
 import { useCRM } from '../../context';
 
 const WA_TEMPLATES = [
-  { id: 'followup', label: 'Loan Follow-up', message: (name: string, loan: string) => `Hi ${name}, regarding your ${loan?.replace(/-/g, ' ')} enquiry at Rachakonda Solutions — our team is ready to assist you.` },
-  { id: 'documents', label: 'Document Request', message: (name: string, loan: string) => `Hi ${name}, to process your ${loan?.replace(/-/g, ' ')} application, we need: Aadhaar, PAN, Income Proof, Bank Statements (6 months).` },
-  { id: 'approval', label: 'Approval Message', message: (name: string, loan: string) => `Congratulations ${name}! Your ${loan?.replace(/-/g, ' ')} has been approved by Rachakonda Solutions!` },
-  { id: 'rejection', label: 'Rejection Notice', message: (name: string, loan: string) => `Hi ${name}, we're unable to proceed with your ${loan?.replace(/-/g, ' ')} at this time. Please contact us for alternatives.` },
+  { id: 'followup', label: 'Interview Invitation', message: (name: string, role: string) => `Hi ${name}, greetings from Rachakonda Solutions Pvt Ltd! Regarding your application for ${role || 'Staff Opening'}, our recruitment team invites you for an in-person interview at our Gajwel office.` },
+  { id: 'documents', label: 'Interview Documents', message: (name: string, role: string) => `Hi ${name}, for your interview at Rachakonda Solutions (${role || 'open position'}), please bring: 1. Updated Resume, 2. Aadhaar Card, 3. Educational Certificates, 4. Two Passport Photos.` },
+  { id: 'approval', label: 'Selection Offer Confirmation', message: (name: string, role: string) => `Congratulations ${name}! You have been SELECTED for ${role || 'the staff position'} at Rachakonda Solutions Pvt Ltd! Please contact HR at 9640333313 for your joining letter.` },
+  { id: 'rejection', label: 'Application Status Update', message: (name: string, role: string) => `Hi ${name}, thank you for applying to Rachakonda Solutions. We have chosen to proceed with other candidates for this cycle, but will keep your resume for future opportunities.` },
 ];
 
 export default function LeadDetailPage() {
@@ -40,7 +40,7 @@ export default function LeadDetailPage() {
     if (!template) return;
     const cleanPhone = (lead.phone || '').replace(/[^0-9]/g, '');
     const fullPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-    const msg = encodeURIComponent(template.message(lead.name, lead.loan_type));
+    const msg = encodeURIComponent(template.message(lead.name, lead.designation || lead.loan_type));
     window.open(`https://wa.me/${fullPhone}?text=${msg}`, '_blank');
     setWaMenuOpen(false);
   };
@@ -243,10 +243,10 @@ export default function LeadDetailPage() {
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Loan Type</p>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Applied Position / Role</p>
                 <div className="flex items-center text-slate-900 font-medium capitalize">
                   <Briefcase className="w-4 h-4 mr-2 text-slate-400" />
-                  {lead.loan_type?.replace(/-/g, ' ') || 'N/A'}
+                  {lead.designation || lead.loan_type || 'General Applicant'}
                 </div>
               </div>
               <div>

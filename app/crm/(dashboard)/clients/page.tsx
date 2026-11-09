@@ -13,8 +13,8 @@ function cn(...inputs: any[]) {
 }
 
 const WA_TEMPLATES = [
-  { id: 'followup', label: 'Client Follow-up', message: (name: string, loan: string) => `Hi ${name}, regarding your interest in Rachakonda Solutions — our team is ready to assist you. Please share your convenient time for a call.` },
-  { id: 'documents', label: 'Document Request', message: (name: string, loan: string) => `Hi ${name}, to process your application at Rachakonda Solutions, we need the following documents:\n1. Aadhaar Card\n2. PAN Card\n3. Income Proof\n4. Bank Statements (6 months)\nPlease share at your earliest convenience.` },
+  { id: 'followup', label: 'Applicant / Student Follow-up', message: (name: string, role: string) => `Hi ${name}, regarding your inquiry at Rachakonda Solutions — our team is ready to assist you. Please share your convenient time for a discussion.` },
+  { id: 'documents', label: 'Document Request', message: (name: string, role: string) => `Hi ${name}, to process your application at Rachakonda Solutions, please bring/share:\n1. Updated Resume\n2. Aadhaar Card\n3. Educational Certificates\n4. Passport Size Photo.` },
 ];
 
 function ClientsContent() {
@@ -293,7 +293,7 @@ function ClientsContent() {
                   <div>
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">{selectedLead.name}</h2>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mt-1">
-                      <Target className="w-3.5 h-3.5" /> ID: {selectedLead.id.slice(0,8)} • {selectedLead.loan_type?.replace(/-/g, ' ')}
+                      <Target className="w-3.5 h-3.5" /> ID: {selectedLead.id.slice(0,8)} • {selectedLead.designation || selectedLead.loan_type || 'General'}
                     </p>
                   </div>
                 </div>

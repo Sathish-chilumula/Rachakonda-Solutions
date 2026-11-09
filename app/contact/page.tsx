@@ -36,14 +36,22 @@ export default function ContactPage() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      console.log('Contact form submission:', data);
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to submit form');
+      }
+
       setSubmitSuccess(true);
       reset();
       setTimeout(() => setSubmitSuccess(false), 7000);
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Failed to send message. Please try again.');
+      alert('Failed to send message. Please try again or call us at +91 9640333313.');
     } finally {
       setIsSubmitting(false);
     }
