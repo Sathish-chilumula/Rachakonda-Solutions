@@ -26,7 +26,9 @@ import {
   CheckCircle2,
   RefreshCw,
   Eye,
-  FileText
+  FileText,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -56,6 +58,8 @@ function LeadsContent() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [candidateToDelete, setCandidateToDelete] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -117,6 +121,31 @@ function LeadsContent() {
   };
 
   // Status updates for candidate
+  const handleConfirmDeleteCandidate = async () => {
+    if (!candidateToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/careers/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: candidateToDelete.id }),
+      });
+      if (res.ok) {
+        setCandidates((prev) => prev.filter((c) => c.id !== candidateToDelete.id));
+        setCounselingLeads((prev) => prev.filter((c) => c.id !== candidateToDelete.id));
+        showToast(`Record for "${candidateToDelete.name}" permanently deleted.`);
+        setCandidateToDelete(null);
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error}`);
+      }
+    } catch (e: any) {
+      alert(`Delete error: ${e.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleCandidateStatus = async (
     id: string,
     name: string,
@@ -451,9 +480,19 @@ function LeadsContent() {
                           </div>
                         </td>
 
-                        <td className="py-4 px-4">
-                          <p className="text-xs font-bold text-slate-800">{c.qualification}</p>
-                          <p className="text-xs text-slate-500">Exp: {c.experience}</p>
+                        <td className="py-4 px-4 min-w-[180px]">
+                          <p className="text-xs font-black text-slate-900">{c.qualification}</p>
+                          <div className="mt-1">
+                            {c.experience.toLowerCase() === 'fresher' ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                                Fresher
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-300">
+                                💼 {c.experience}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         <td className="py-4 px-4 whitespace-nowrap">
@@ -513,6 +552,13 @@ function LeadsContent() {
                               }`}
                             >
                               Reject 🔴
+                            </button>
+                            <button
+                              onClick={() => setCandidateToDelete(c)}
+                              className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Delete candidate application"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -649,6 +695,65 @@ function LeadsContent() {
           )}
         </div>
       )}
+      {/* Accidental Deletion Protection Modal */}
+      <AnimatePresence>
+        {candidateToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => !isDeleting && setCandidateToDelete(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-red-200 z-10"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mb-4">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-black text-slate-900">
+                Permanently Delete Application?
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                To prevent accidental deletion, please confirm before removing this candidate:
+              </p>
+
+              <div className="p-3 my-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
+                <p><span className="text-slate-400 font-semibold">Candidate:</span> <strong className="text-slate-900">{candidateToDelete.name}</strong></p>
+                <p><span className="text-slate-400 font-semibold">Mobile:</span> <strong className="text-slate-800">{candidateToDelete.phone}</strong></p>
+              </div>
+
+              <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-red-800 text-[11px] font-semibold mb-5 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>This application will be permanently removed from Supabase. This cannot be undone.</span>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setCandidateToDelete(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleConfirmDeleteCandidate}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-md"
+                >
+                  {isDeleting ? 'Deleting...' : 'Yes, Delete Application'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

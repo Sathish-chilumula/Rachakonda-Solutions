@@ -74,6 +74,7 @@ export default function CareersPage() {
     qualification: string;
   } | null>(null);
   const [isPosterModalOpen, setIsPosterModalOpen] = useState<boolean>(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -146,12 +147,23 @@ export default function CareersPage() {
     let refId = `RS-2026-JOB-${Math.floor(1000 + Math.random() * 9000)}`;
 
     try {
-      // 1. Submit via server API route (guaranteed bypass of RLS)
+      setDuplicateError(null);
+      // 1. Submit via server API route (guaranteed bypass of RLS & duplicate restriction)
       const res = await fetch('/api/careers/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+
+      if (res.status === 409) {
+        const errJson = await res.json();
+        setDuplicateError(errJson.error || 'An application has already been submitted with this Mobile Number or Email ID.');
+        setIsSubmitting(false);
+        if (formRef.current) {
+          formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        return;
+      }
 
       if (res.ok) {
         const json = await res.json();
@@ -649,6 +661,33 @@ export default function CareersPage() {
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  {duplicateError && (
+                    <div className="p-4 sm:p-5 rounded-2xl bg-red-50 border-2 border-red-300 text-red-950 flex items-start gap-3.5 shadow-sm animate-in fade-in">
+                      <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="text-sm font-black text-red-900">Application Already Registered</h4>
+                        <p className="text-xs sm:text-sm text-red-800 mt-1 leading-relaxed font-medium">
+                          {duplicateError}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                          <a
+                            href="https://wa.me/919640333313?text=Hello%20HR,%20I%20have%20already%20applied%20for%20the%2095%20Staff%20Walk-in%20Drive%20and%20need%20assistance."
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-xs transition-colors"
+                          >
+                            Chat with HR on WhatsApp
+                          </a>
+                          <a
+                            href="tel:+919640333313"
+                            className="text-xs font-bold text-red-700 hover:underline"
+                          >
+                            Call: 9640333313
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {/* Field 1: Full Name */}
                     <div>
@@ -834,15 +873,19 @@ export default function CareersPage() {
                         animate={{ opacity: 1, height: 'auto' }}
                         className="pt-2"
                       >
-                        <label className="block text-xs text-slate-600 font-semibold mb-1">
-                          Specify Years of Experience &amp; Previous Organization / Role:
+                        <label className="block text-xs text-slate-800 font-bold mb-1">
+                          Specify Years of Experience &amp; Previous Company / Role: <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           placeholder="e.g. 2 years as Telecaller at ABC Solutions / 1 year as Office Assistant"
                           {...register('experienceDetails')}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                          required={watchHasExperience === 'Yes'}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
                         />
+                        <span className="text-[11px] text-slate-500 mt-1 block">
+                          This experience information will be reviewed by the interview panel.
+                        </span>
                       </motion.div>
                     )}
                   </div>

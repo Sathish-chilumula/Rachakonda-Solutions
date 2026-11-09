@@ -34,7 +34,13 @@ export function parseCandidateLead(lead: any): CandidateItem {
   const qualification = matchField(/Qual:\s*([^|]+)/i) || 'N/A';
   const gender = matchField(/Gender:\s*([^|]+)/i) || 'N/A';
   const maritalStatus = matchField(/Marital:\s*([^|]+)/i) || 'N/A';
-  const experience = matchField(/Exp:\s*([^|]+)/i) || 'Fresher';
+  let experience = lead.employment_type || '';
+  if (!experience) {
+    experience = matchField(/Exp:\s*([^|]+)/i);
+  }
+  if (!experience || experience.toLowerCase() === 'no' || experience.trim() === '') {
+    experience = 'Fresher';
+  }
   const email = matchField(/Email:\s*([^|]+)/i) || 'N/A';
   const refId = matchField(/Ref:\s*([^|]+)/i) || `RS-2026-JOB-${(lead.id || '').slice(0, 4).toUpperCase()}`;
   

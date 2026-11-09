@@ -29,7 +29,9 @@ import {
   FileText,
   Printer,
   X,
-  Share2
+  Share2,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { JOB_ROLES } from '@/lib/data/careers';
 import { CandidateItem, parseCandidateLead, exportCandidatesToCSV } from '@/lib/candidate-utils';
@@ -50,6 +52,9 @@ export default function CandidatesAdminPage() {
   const [noteText, setNoteText] = useState<string>('');
   const [savingNote, setSavingNote] = useState<boolean>(false);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+  const [candidateToDelete, setCandidateToDelete] = useState<CandidateItem | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const showToast = (msg: string) => {
     setActionSuccessMessage(msg);
@@ -172,6 +177,59 @@ export default function CandidatesAdminPage() {
       }
     } finally {
       setSavingNote(false);
+    }
+  };
+
+  // Safe Delete Handlers with confirmation
+  const handleConfirmDeleteSingle = async () => {
+    if (!candidateToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/careers/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: candidateToDelete.id }),
+      });
+      if (res.ok) {
+        setCandidates((prev) => prev.filter((c) => c.id !== candidateToDelete.id));
+        if (activeModalCandidate?.id === candidateToDelete.id) {
+          setActiveModalCandidate(null);
+        }
+        showToast(`Candidate "${candidateToDelete.name}" permanently deleted.`);
+        setCandidateToDelete(null);
+      } else {
+        const err = await res.json();
+        alert(`Failed to delete candidate: ${err.error}`);
+      }
+    } catch (e: any) {
+      alert(`Error deleting candidate: ${e.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleConfirmDeleteBulk = async () => {
+    if (selectedIds.length === 0) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/careers/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      if (res.ok) {
+        setCandidates((prev) => prev.filter((c) => !selectedIds.includes(c.id)));
+        showToast(`Successfully deleted ${selectedIds.length} candidate applications.`);
+        setSelectedIds([]);
+        setIsBulkDeleting(false);
+      } else {
+        const err = await res.json();
+        alert(`Failed to delete candidates: ${err.error}`);
+      }
+    } catch (e: any) {
+      alert(`Error deleting candidates: ${e.message}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -495,6 +553,12 @@ export default function CandidatesAdminPage() {
               >
                 <FileDown className="w-3.5 h-3.5" /> Export Selected CSV
               </button>
+              <button
+                onClick={() => setIsBulkDeleting(true)}
+                className="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete Selected ({selectedIds.length})
+              </button>
             </div>
           </div>
         )}
@@ -650,14 +714,25 @@ export default function CandidatesAdminPage() {
                       </td>
 
                       {/* Qualification & Experience */}
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-4 min-w-[200px]">
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-800">
+                          <span className="text-xs font-black text-slate-900">
                             {candidate.qualification}
                           </span>
-                          <span className="text-xs text-slate-500 font-medium">
-                            Exp: <span className={candidate.experience === 'Fresher' ? 'text-blue-600' : 'text-amber-700 font-bold'}>{candidate.experience}</span>
-                          </span>
+                          <div className="mt-1">
+                            {candidate.experience.toLowerCase() === 'fresher' ? (
+                              <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                                Fresher
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center text-[11px] font-bold px-2 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 leading-tight"
+                                title={candidate.experience}
+                              >
+                                💼 {candidate.experience}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -773,15 +848,24 @@ export default function CandidatesAdminPage() {
                         </div>
                       </td>
 
-                      {/* Details View */}
+                      {/* Details & Delete View */}
                       <td className="py-4 px-4 text-right">
-                        <button
-                          onClick={() => setActiveModalCandidate(candidate)}
-                          className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          title="View Application Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setActiveModalCandidate(candidate)}
+                            className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="View Full Application Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setCandidateToDelete(candidate)}
+                            className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Permanently Delete Application"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -967,11 +1051,22 @@ export default function CandidatesAdminPage() {
                     <span className="text-sm font-bold text-slate-900">{activeModalCandidate.email}</span>
                   </div>
 
-                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                      9. Experience
-                    </span>
-                    <span className="text-sm font-black text-slate-900">{activeModalCandidate.experience}</span>
+                  <div className="p-4 bg-amber-50/70 rounded-2xl border border-amber-200 sm:col-span-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">
+                        9. Prior Work Experience &amp; Details
+                      </span>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        activeModalCandidate.experience.toLowerCase() === 'fresher'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {activeModalCandidate.experience.toLowerCase() === 'fresher' ? 'Fresher' : 'Has Experience'}
+                      </span>
+                    </div>
+                    <p className="text-sm font-black text-slate-900 mt-1 leading-relaxed">
+                      {activeModalCandidate.experience}
+                    </p>
                   </div>
 
                   <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200 sm:col-span-2">
@@ -1023,19 +1118,144 @@ export default function CandidatesAdminPage() {
 
               {/* Modal Footer */}
               <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5"
-                >
-                  <Printer className="w-3.5 h-3.5" /> Print Application Slip
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Print Slip
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCandidateToDelete(activeModalCandidate)}
+                    className="px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete Application
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => setActiveModalCandidate(null)}
                   className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800"
                 >
                   Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* ─── Accidental Deletion Protection Modal (Single) ─── */}
+      <AnimatePresence>
+        {candidateToDelete && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => !isDeleting && setCandidateToDelete(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-red-200 z-10"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mb-4 shadow-xs">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-black text-slate-900">
+                Permanently Delete Application?
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                To prevent accidental deletion, please review candidate information before confirming:
+              </p>
+
+              <div className="p-3.5 my-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5 text-xs">
+                <p><span className="text-slate-400 font-semibold">Candidate:</span> <strong className="text-slate-900 font-black">{candidateToDelete.name}</strong></p>
+                <p><span className="text-slate-400 font-semibold">Ref ID:</span> <strong className="text-blue-700 font-mono font-bold">{candidateToDelete.refId}</strong></p>
+                <p><span className="text-slate-400 font-semibold">Mobile:</span> <strong className="text-slate-800 font-bold">{candidateToDelete.phone}</strong></p>
+                <p><span className="text-slate-400 font-semibold">Roles:</span> <strong className="text-slate-800">{candidateToDelete.rolesString}</strong></p>
+              </div>
+
+              <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-red-800 text-[11px] font-semibold mb-5 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>This application will be permanently removed from the Supabase database and Excel exports. This cannot be undone.</span>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setCandidateToDelete(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel (Keep)
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleConfirmDeleteSingle}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isDeleting ? 'Deleting...' : 'Yes, Permanently Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Accidental Deletion Protection Modal (Bulk) ─── */}
+      <AnimatePresence>
+        {isBulkDeleting && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => !isDeleting && setIsBulkDeleting(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-red-200 z-10"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mb-4 shadow-xs">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-black text-slate-900">
+                Delete {selectedIds.length} Candidate Applications?
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                You have selected <strong className="text-slate-900">{selectedIds.length}</strong> applications for permanent deletion.
+              </p>
+
+              <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-red-800 text-[11px] font-semibold my-4 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>All {selectedIds.length} records will be permanently erased from Supabase.</span>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setIsBulkDeleting(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleConfirmDeleteBulk}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-md disabled:opacity-50"
+                >
+                  {isDeleting ? 'Deleting...' : `Yes, Delete All ${selectedIds.length}`}
                 </button>
               </div>
             </motion.div>
