@@ -77,6 +77,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               {[
+                { name: 'Careers (95 Openings)', path: '/careers' },
                 { name: 'Government Jobs', path: '/government-jobs' },
                 { name: 'Scholarships Hub', path: '/scholarships' },
                 { name: 'Career Guidance', path: '/career-guidance' },

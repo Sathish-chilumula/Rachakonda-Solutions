@@ -330,6 +330,54 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ═══ WE ARE HIRING 95 STAFF BANNER ═════════════════════════════════ */}
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mb-12 sm:mb-16">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-blue-950 to-indigo-950 border border-amber-400/30 p-5 sm:p-8 text-white shadow-xl"
+        >
+          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-3 max-w-2xl">
+              <div className="inline-flex items-center gap-2 bg-amber-500/20 border border-amber-400/40 rounded-full px-3 py-1">
+                <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+                <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-amber-300">
+                  Walk-in Interview Drive • TOTAL 95 VACANCIES
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-3xl font-black font-display tracking-tight leading-tight">
+                We Are Hiring! Join Our Team at Gajwel Campus
+              </h2>
+              <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
+                Openings for <strong>Admin Managers, Tele Callers, Team Leads, Receptionists, Data Entry, Tutors &amp; Graphic Designers</strong>.
+                Salary <strong>₹2.5 LPA – ₹3.0 LPA</strong> (Based on experience) + <strong>PF &amp; ESI Provided</strong>.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <Link
+                href="/careers"
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm px-5 py-3 rounded-xl shadow-lg hover:shadow-amber-500/30 transition-all flex items-center gap-1.5"
+              >
+                <Briefcase className="w-4 h-4" />
+                View 11 Roles &amp; Apply Now
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <a
+                href="tel:+919640333313"
+                className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs sm:text-sm px-4 py-3 rounded-xl transition-all flex items-center gap-1.5"
+              >
+                <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                Call HR: +91 9640333313
+              </a>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
       {/* ═══ STUDENT JOURNEY (2-COLUMN APP GRID ON MOBILE) ═══════════════════ */}
       <section className="py-12 sm:py-16 bg-white border-y border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -23,6 +23,7 @@ const navGroups = [
       { name: 'Exams', href: '/exams', desc: 'EAMCET, NEET, TSPSC & more' },
       { name: 'Govt Jobs', href: '/government-jobs', desc: 'Latest openings by qualification' },
       { name: 'Scholarships', href: '/scholarships', desc: 'TS, AP & national schemes' },
+      { name: 'Careers & Hiring', href: '/careers', desc: '★ 95 Staff Openings • Walk-in Drive' },
     ],
   },
   {
@@ -176,6 +177,24 @@ export default function Header() {
                 </div>
               );
             })}
+
+            {/* Direct Careers Highlight Link */}
+            <Link
+              href="/careers"
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-xl transition-all ${
+                pathname === '/careers'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : isLight
+                  ? 'text-amber-800 bg-amber-50/80 hover:bg-amber-100 border border-amber-200/80'
+                  : 'text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5 text-amber-600" />
+              <span>Careers</span>
+              <span className="text-[10px] bg-red-600 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase tracking-tight animate-pulse">
+                95 Posts
+              </span>
+            </Link>
           </nav>
 
           {/* Desktop Actions */}
@@ -244,24 +263,48 @@ export default function Header() {
                 </span>
               </div>
 
+              {/* Urgent Hiring Banner in Mobile Drawer */}
+              <Link
+                href="/careers"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-3 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 border border-amber-300 rounded-2xl flex items-center justify-between shadow-xs hover:border-amber-400 transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shrink-0 shadow-sm">
+                    <Briefcase className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                      We Are Hiring 95 Staff!
+                      <span className="animate-pulse inline-block w-2 h-2 rounded-full bg-red-600"></span>
+                    </p>
+                    <p className="text-[10px] text-amber-800 font-medium">Walk-in Interview Drive &bull; Apply Online</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-extrabold text-amber-950 bg-amber-300/80 px-2 py-0.5 rounded-lg shrink-0">
+                  Apply &rarr;
+                </span>
+              </Link>
+
               {/* Quick App Shortcut Grid */}
-              <div className="grid grid-cols-4 gap-2 pt-1 pb-2">
+              <div className="grid grid-cols-5 gap-1.5 pt-1 pb-2">
                 {[
                   { label: 'Colleges', href: '/colleges', icon: Building2, color: 'text-blue-600 bg-blue-50' },
                   { label: 'Exams', href: '/exams', icon: BookOpen, color: 'text-teal-600 bg-teal-50' },
+                  { label: 'Careers', href: '/careers', icon: Briefcase, color: 'text-amber-600 bg-amber-50' },
                   { label: 'Scholarships', href: '/scholarships', icon: Gift, color: 'text-purple-600 bg-purple-50' },
-                  { label: 'Govt Jobs', href: '/government-jobs', icon: Briefcase, color: 'text-amber-600 bg-amber-50' },
+                  { label: 'Govt Jobs', href: '/government-jobs', icon: Briefcase, color: 'text-slate-600 bg-slate-100' },
                 ].map((item) => (
                   <Link
                     key={item.label}
                     href={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex flex-col items-center p-2 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 active:scale-95 transition-all text-center"
+                    className="flex flex-col items-center p-1.5 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 active:scale-95 transition-all text-center"
                   >
-                    <div className={`w-8 h-8 rounded-lg ${item.color} flex items-center justify-center mb-1`}>
-                      <item.icon className="w-4 h-4" />
+                    <div className={`w-7 h-7 rounded-lg ${item.color} flex items-center justify-center mb-1`}>
+                      <item.icon className="w-3.5 h-3.5" />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700">{item.label}</span>
+                    <span className="text-[10px] font-bold text-slate-700 truncate w-full">{item.label}</span>
                   </Link>
                 ))}
               </div>
