@@ -554,11 +554,13 @@ function LeadsContent() {
                               Reject 🔴
                             </button>
                             <button
+                              type="button"
                               onClick={() => setCandidateToDelete(c)}
-                              className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                              title="Delete candidate application"
+                              className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 shadow-2xs"
+                              title="Permanently Delete Candidate (Confirmation required)"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
                             </button>
                           </div>
                         </td>

@@ -845,6 +845,17 @@ export default function CandidatesAdminPage() {
                             <XCircle className="w-3.5 h-3.5" />
                             <span>Reject</span>
                           </button>
+
+                          {/* Permanently Delete Button (With Confirmation Safeguard) */}
+                          <button
+                            type="button"
+                            onClick={() => setCandidateToDelete(candidate)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 cursor-pointer text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 shadow-2xs"
+                            title="Permanently Delete Candidate (Confirmation required)"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-500 group-hover:text-white" />
+                            <span>Delete</span>
+                          </button>
                         </div>
                       </td>
 
@@ -978,6 +989,13 @@ export default function CandidatesAdminPage() {
                     className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black flex items-center gap-1 shadow-xs"
                   >
                     <XCircle className="w-3.5 h-3.5" /> Mark Rejected 🔴
+                  </button>
+
+                  <button
+                    onClick={() => setCandidateToDelete(activeModalCandidate)}
+                    className="px-3 py-1.5 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-black flex items-center gap-1 shadow-xs cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete Application 🗑️
                   </button>
                 </div>
               </div>

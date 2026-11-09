@@ -1,0 +1,56 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Runs twice every day at 00:00 and 12:00 UTC (05:30 and 17:30 IST) to keep Supabase from auto-pausing
+    - cron: '0 0,12 * * *'
+  workflow_dispatch: # Allows manual on-demand trigger from GitHub Actions tab
+
+jobs:
+  ping-supabase:
+    name: Ping Supabase Database & Auth API
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Supabase REST API (Database Activity)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://kwidamtlofdadtxvedto.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3aWRhbXRsb2ZkYWR0eHZlZHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjgzNjksImV4cCI6MjA4OTMwNDM2OX0.cqYbZTE1-y4kaXpQwPhTA9SnM61LsoTJT5QLbZs9Kw4' }}
+        run: |
+          echo "Sending keep-alive ping to Supabase REST API..."
+          STATUS_CODE=$(curl -s -o response.json -w "%{http_code}" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/leads?select=id&limit=1")
+          
+          echo "REST API HTTP Status: $STATUS_CODE"
+          cat response.json
+          echo ""
+
+          if [ "$STATUS_CODE" -ge 200 ] && [ "$STATUS_CODE" -lt 300 ]; then
+            echo "✅ Supabase Database REST API ping successful! Active status maintained."
+          else
+            echo "❌ Unexpected status code: $STATUS_CODE"
+            exit 1
+          fi
+
+      - name: Ping Supabase Auth Health Endpoint
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://kwidamtlofdadtxvedto.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3aWRhbXRsb2ZkYWR0eHZlZHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjgzNjksImV4cCI6MjA4OTMwNDM2OX0.cqYbZTE1-y4kaXpQwPhTA9SnM61LsoTJT5QLbZs9Kw4' }}
+        run: |
+          echo "Sending keep-alive ping to Supabase Auth API..."
+          AUTH_STATUS=$(curl -s -o auth_response.json -w "%{http_code}" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/auth/v1/health")
+          
+          echo "Auth API HTTP Status: $AUTH_STATUS"
+          cat auth_response.json
+          echo ""
+
+          if [ "$AUTH_STATUS" -ge 200 ] && [ "$AUTH_STATUS" -lt 300 ]; then
+            echo "✅ Supabase Auth API ping successful!"
+          else
+            echo "❌ Unexpected auth status code: $AUTH_STATUS"
+            exit 1
+          fi
