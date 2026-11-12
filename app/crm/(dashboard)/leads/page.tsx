@@ -14,6 +14,7 @@ import {
   Briefcase,
   Users,
   MessageCircle,
+  MessageSquare,
   AlertCircle,
   Check,
   ChevronRight,
@@ -106,6 +107,13 @@ function LeadsContent() {
       setLoading(false);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'students' || tabParam === 'counseling' || tabParam === 'candidates') {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchData();
@@ -230,7 +238,7 @@ function LeadsContent() {
       `"${s.course_name || ''}"`,
       `"${s.category || ''}"`,
       `"${s.status || ''}"`,
-      `"${new Date(s.created_at).toLocaleDateString('en-IN')}"`,
+      `"${s.created_at ? new Date(s.created_at).toLocaleDateString('en-IN') : 'N/A'}"`,
     ]);
     const csv = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -251,7 +259,7 @@ function LeadsContent() {
       `"${l.designation || 'General'}"`,
       `"${(l.remarks || '').replace(/"/g, '""')}"`,
       `"${l.status || 'new'}"`,
-      `"${new Date(l.created_at).toLocaleDateString('en-IN')}"`,
+      `"${l.created_at ? new Date(l.created_at).toLocaleDateString('en-IN') : 'N/A'}"`,
     ]);
     const csv = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -298,7 +306,9 @@ function LeadsContent() {
         !search ||
         (l.name || '').toLowerCase().includes(q) ||
         (l.phone || '').includes(q) ||
-        (l.city || '').toLowerCase().includes(q);
+        (l.city || '').toLowerCase().includes(q) ||
+        (l.designation || '').toLowerCase().includes(q) ||
+        (l.remarks || '').toLowerCase().includes(q);
       return matchStatus && matchSearch;
     });
   }, [counselingLeads, statusFilter, search]);
@@ -698,7 +708,7 @@ function LeadsContent() {
                           <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 font-extrabold text-xs flex items-center justify-center shrink-0">
                             {l.name ? l.name.charAt(0).toUpperCase() : 'V'}
                           </div>
-                          <span>{l.name}</span>
+                          <span>{l.name || 'Anonymous Inquiry'}</span>
                         </div>
                       </td>
                       <td className="py-4 px-4">
@@ -709,35 +719,37 @@ function LeadsContent() {
                       <td className="py-4 px-4">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <a href={`tel:${l.phone}`} className="font-bold text-slate-900 hover:text-blue-600 text-xs flex items-center gap-1">
+                            <a href={`tel:${l.phone || ''}`} className="font-bold text-slate-900 hover:text-blue-600 text-xs flex items-center gap-1">
                               <Phone className="w-3.5 h-3.5 text-slate-400" />
-                              {l.phone}
+                              {l.phone || 'N/A'}
                             </a>
-                            <a
-                              href={`https://wa.me/91${(l.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(
-                                `Hello ${l.name}, Greetings from Rachakonda Solutions regarding your counseling inquiry.`
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                              title="Chat on WhatsApp"
-                            >
-                              <MessageSquare className="w-3 h-3" /> WhatsApp
-                            </a>
+                            {l.phone && (
+                              <a
+                                href={`https://wa.me/91${(l.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(
+                                  `Hello ${l.name || 'there'}, Greetings from Rachakonda Solutions regarding your counseling inquiry.`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                                title="Chat on WhatsApp"
+                              >
+                                <MessageSquare className="w-3 h-3" /> WhatsApp
+                              </a>
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-4 text-xs text-slate-600 max-w-xs">
-                        <p className="line-clamp-2 leading-relaxed" title={l.remarks}>
+                        <p className="line-clamp-2 leading-relaxed" title={l.remarks || ''}>
                           {l.remarks || 'No additional message.'}
                         </p>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs">
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-slate-800">
-                            {new Date(l.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {l.created_at ? new Date(l.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                           </span>
-                          {new Date(l.created_at).toDateString() === new Date().toDateString() && (
+                          {l.created_at && new Date(l.created_at).toDateString() === new Date().toDateString() && (
                             <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                               Today
                             </span>
@@ -765,7 +777,7 @@ function LeadsContent() {
                       <td className="py-4 px-4 text-center">
                         <button
                           type="button"
-                          onClick={() => setCandidateToDelete({ id: l.id, name: l.name, phone: l.phone, rolesString: l.designation || 'Inquiry', refId: 'INQUIRY' })}
+                          onClick={() => setCandidateToDelete({ id: l.id, name: l.name || 'Anonymous', phone: l.phone || 'N/A', rolesString: l.designation || 'Inquiry', refId: 'INQUIRY' })}
                           className="px-2.5 py-1 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1 mx-auto"
                           title="Delete inquiry"
                         >
@@ -802,20 +814,23 @@ function LeadsContent() {
                 <Trash2 className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-black text-slate-900">
-                Permanently Delete Application?
+                {candidateToDelete.refId === 'INQUIRY' ? 'Permanently Delete Inquiry?' : 'Permanently Delete Application?'}
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                To prevent accidental deletion, please confirm before removing this candidate:
+                To prevent accidental deletion, please confirm before removing this {candidateToDelete.refId === 'INQUIRY' ? 'inquiry' : 'candidate'}:
               </p>
 
               <div className="p-3 my-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
-                <p><span className="text-slate-400 font-semibold">Candidate:</span> <strong className="text-slate-900">{candidateToDelete.name}</strong></p>
+                <p><span className="text-slate-400 font-semibold">{candidateToDelete.refId === 'INQUIRY' ? 'Visitor:' : 'Candidate:'}</span> <strong className="text-slate-900">{candidateToDelete.name}</strong></p>
                 <p><span className="text-slate-400 font-semibold">Mobile:</span> <strong className="text-slate-800">{candidateToDelete.phone}</strong></p>
+                {candidateToDelete.rolesString && (
+                  <p><span className="text-slate-400 font-semibold">{candidateToDelete.refId === 'INQUIRY' ? 'Subject:' : 'Role(s):'}</span> <strong className="text-blue-700">{candidateToDelete.rolesString}</strong></p>
+                )}
               </div>
 
               <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-red-800 text-[11px] font-semibold mb-5 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <span>This application will be permanently removed from Supabase. This cannot be undone.</span>
+                <span>This record will be permanently removed from Supabase. This cannot be undone.</span>
               </div>
 
               <div className="flex items-center justify-end gap-3">
@@ -833,7 +848,7 @@ function LeadsContent() {
                   onClick={handleConfirmDeleteCandidate}
                   className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-md"
                 >
-                  {isDeleting ? 'Deleting...' : 'Yes, Delete Application'}
+                  {isDeleting ? 'Deleting...' : (candidateToDelete.refId === 'INQUIRY' ? 'Yes, Delete Inquiry' : 'Yes, Delete Application')}
                 </button>
               </div>
             </motion.div>
