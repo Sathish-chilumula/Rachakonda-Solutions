@@ -26,7 +26,7 @@ export interface CandidateItem {
 }
 
 /**
- * Appends an email audit tag to internal_notes so no duplicates are sent.
+ * Appends an email audit tag to internal_notes while preserving lifecycle history.
  */
 export function recordEmailLogTag(
   existingNotes: string | null | undefined,
@@ -34,7 +34,9 @@ export function recordEmailLogTag(
 ): string {
   const now = new Date().toISOString();
   const tag = `[EMAIL: ${type} | ${now}]`;
-  const clean = (existingNotes || '').replace(/\[EMAIL:\s*[^\]]+\]/gi, '').trim();
+  // Clean only duplicate tags of the SAME type, but preserve other lifecycle tags (e.g., confirmation + interview)
+  const sameTypeRegex = new RegExp(`\\[EMAIL:\\s*${type}\\s*\\|\\s*[^\\]]+\\]`, 'gi');
+  const clean = (existingNotes || '').replace(sameTypeRegex, '').trim();
   return clean ? `${tag}\n${clean}` : tag;
 }
 
