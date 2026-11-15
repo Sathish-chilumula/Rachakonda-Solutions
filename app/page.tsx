@@ -113,13 +113,13 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50 overflow-hidden">
 
       {/* ═══ PREMIUM HERO ══════════════════════════════════════════════════════ */}
-      <section className="relative pt-20 pb-10 sm:pt-28 sm:pb-16 lg:pt-36 lg:pb-32 bg-slate-900 overflow-hidden">
+      <section className="relative pt-20 pb-10 sm:pt-28 sm:pb-16 lg:pt-36 lg:pb-32 mesh-hero overflow-hidden">
         {/* Optimized background image */}
         <div 
-          className="absolute inset-0 bg-cover bg-center opacity-25 pointer-events-none"
+          className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none"
           style={{ backgroundImage: "url('/images/abstract_education_bg.webp')" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/95 to-blue-950/60 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-900/90 to-blue-950/50 pointer-events-none" />
         <div className="absolute top-1/4 left-0 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-3xl -translate-x-1/2 pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-3xl translate-x-1/3 translate-y-1/3 pointer-events-none" />
 
@@ -165,7 +165,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
-                className="bg-white/10 backdrop-blur-xl p-2 sm:p-3 rounded-2xl sm:rounded-3xl border border-white/20 shadow-2xl max-w-2xl mx-auto lg:mx-0"
+                className="glass-dark p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl mx-auto lg:mx-0"
               >
                 {/* Search Tabs */}
                 <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 px-1">
@@ -271,13 +271,13 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="absolute top-8 -left-6 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-100 flex items-center gap-3.5 z-20"
+                  className="absolute top-8 -left-6 glass-panel rounded-2xl p-4 shadow-xl flex items-center gap-3.5 z-20"
                 >
                   <div className="w-11 h-11 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
                     <Award className="w-6 h-6 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-xl font-black text-slate-900 leading-none">10,000+</p>
+                    <p className="text-xl font-black text-slate-900 leading-none font-display">10,000+</p>
                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-1">Students Guided</p>
                   </div>
                 </motion.div>
@@ -287,13 +287,13 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 }}
-                  className="absolute bottom-12 -right-4 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-100 flex items-center gap-3.5 z-20"
+                  className="absolute bottom-12 -right-4 glass-panel rounded-2xl p-4 shadow-xl flex items-center gap-3.5 z-20"
                 >
                   <div className="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
                     <Building2 className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-xl font-black text-slate-900 leading-none">100+</p>
+                    <p className="text-xl font-black text-slate-900 leading-none font-display">100+</p>
                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-1">Colleges &amp; Universities</p>
                   </div>
                 </motion.div>
@@ -427,7 +427,7 @@ export default function Home() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.96 }}
                   transition={{ delay: i * 0.04, duration: 0.2 }}
-                  className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 border border-slate-200/80 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between"
+                  className="glass-panel rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between"
                 >
                   <div>
                     <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${colorMap[path.color]} flex items-center justify-center mb-2.5 sm:mb-5 border group-hover:scale-110 transition-transform duration-300`}>

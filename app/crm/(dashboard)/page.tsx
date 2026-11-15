@@ -261,7 +261,7 @@ export default function DashboardPage() {
               >
                 <card.icon className="w-6 h-6" />
               </div>
-              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 uppercase tracking-widest">
+              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wide shrink-0">
                 {card.sub}
               </span>
             </div>

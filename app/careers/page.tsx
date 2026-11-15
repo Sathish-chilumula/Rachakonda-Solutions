@@ -43,10 +43,10 @@ const formSchema = z.object({
   fatherName: z.string().min(2, "Father's Name is required"),
   address: z.string().min(5, 'Complete residential address with village/town, mandal & district is required'),
   maritalStatus: z.enum(['Single', 'Married'], {
-    required_error: 'Please select your marital status',
+    message: 'Please select your marital status',
   }),
   gender: z.enum(['Female', 'Male', 'Other'], {
-    required_error: 'Please select gender',
+    message: 'Please select gender',
   }),
   qualification: z.string().min(2, 'Educational qualification is required'),
   mobileNo: z
@@ -205,7 +205,7 @@ export default function CareersPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pt-20 pb-20 selection:bg-amber-100 selection:text-amber-900">
       {/* ─── Hero Announcement Section ─────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white py-12 sm:py-20 border-b border-white/10">
+      <section className="relative overflow-hidden mesh-hero text-white py-12 sm:py-20 border-b border-white/10">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-10"
           style={{ backgroundImage: "url('/images/abstract_education_bg.webp')" }}
@@ -249,23 +249,23 @@ export default function CareersPage() {
 
           {/* Quick Perks Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto mb-8">
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-3 sm:p-4 text-center">
-              <div className="text-amber-400 font-black text-lg sm:text-2xl mb-0.5">₹2.5L – 3.0L</div>
+            <div className="glass-dark rounded-2xl p-3 sm:p-4 text-center">
+              <div className="text-amber-400 font-black text-lg sm:text-2xl mb-0.5 tabular-nums">₹2.5L – 3.0L</div>
               <div className="text-[11px] sm:text-xs text-blue-200 font-semibold">Annual CTC + Incentives</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-3 sm:p-4 text-center">
+            <div className="glass-dark rounded-2xl p-3 sm:p-4 text-center">
               <div className="text-emerald-400 font-black text-lg sm:text-2xl mb-0.5 flex items-center justify-center gap-1">
                 <ShieldCheck className="w-5 h-5" /> PF + ESI
               </div>
               <div className="text-[11px] sm:text-xs text-blue-200 font-semibold">Statutory Benefits Provided</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-3 sm:p-4 text-center">
+            <div className="glass-dark rounded-2xl p-3 sm:p-4 text-center">
               <div className="text-amber-300 font-black text-lg sm:text-2xl mb-0.5 flex items-center justify-center gap-1">
                 <Clock className="w-5 h-5" /> 9 AM – 5:30 PM
               </div>
               <div className="text-[11px] sm:text-xs text-blue-200 font-semibold">Day Shift Timings</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-3 sm:p-4 text-center">
+            <div className="glass-dark rounded-2xl p-3 sm:p-4 text-center">
               <div className="text-cyan-300 font-black text-lg sm:text-2xl mb-0.5 flex items-center justify-center gap-1">
                 <Users className="w-5 h-5" /> 95 Posts
               </div>
@@ -419,10 +419,10 @@ export default function CareersPage() {
                 <motion.div
                   key={role.id}
                   layout
-                  className={`bg-white rounded-3xl p-5 sm:p-6 border transition-all duration-200 flex flex-col justify-between ${
+                  className={`glass-panel rounded-3xl p-5 sm:p-6 transition-all duration-200 flex flex-col justify-between ${
                     isSelected
-                      ? 'border-blue-600 ring-2 ring-blue-500/30 shadow-lg bg-blue-50/20'
-                      : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
+                      ? 'border-blue-600 ring-2 ring-blue-500/30 shadow-lg bg-blue-50/40'
+                      : 'hover:border-slate-300 hover:shadow-md'
                   }`}
                 >
                   <div>
@@ -566,7 +566,7 @@ export default function CareersPage() {
 
         {/* ─── The 10-Field Interview Application Form ─────────────────── */}
         <section ref={formRef} id="apply-form" className="scroll-mt-24">
-          <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-lg border border-slate-200">
+          <div className="glass-panel rounded-3xl p-6 sm:p-10 shadow-xl">
             <div className="max-w-3xl mx-auto">
               <div className="text-center mb-8">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold uppercase tracking-wider mb-2">

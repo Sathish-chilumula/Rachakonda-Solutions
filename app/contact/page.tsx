@@ -12,7 +12,7 @@ const formSchema = z.object({
   email: z.string().email('Valid email is required'),
   phone: z.string().min(10, 'Valid 10-digit phone number is required'),
   state: z.enum(['Telangana', 'Andhra Pradesh', 'Other'], {
-    required_error: 'Please select your state',
+    message: 'Please select your state',
   }),
   subject: z.string().min(5, 'Subject is required'),
   message: z.string().min(10, 'Message must be at least 10 characters'),

@@ -227,18 +227,18 @@ function CRMContent({ children, allUsers, handleLogout }: { children: React.Reac
                             "mr-3 h-[18px] w-[18px] shrink-0 transition-colors",
                             isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
                           )} />
-                          <span className="text-[13px] truncate">{item.name}</span>
+                          <span className="text-[13px] font-semibold truncate">{item.name}</span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                           {item.badge && (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-white shadow-2xs whitespace-nowrap tracking-tight">
+                            <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs whitespace-nowrap shrink-0 tracking-tight">
                               {item.badge}
                             </span>
                           )}
                           {item.isExternal && (
-                            <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors shrink-0" />
                           )}
-                          {isActive && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+                          {isActive && <div className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />}
                         </div>
                       </Link>
                     );

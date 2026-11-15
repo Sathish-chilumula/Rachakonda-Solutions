@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import {
+  sendCareerApplicationConfirmationEmail,
+  sendCareerAdminNotificationEmail,
+} from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -115,6 +119,56 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Supabase admin insert error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // ─── 3. Send Email Notifications via Resend ──────────────────────────────
+    try {
+      const emailTasks: Promise<any>[] = [];
+
+      // A. Acknowledgment to the candidate
+      if (cleanEmail) {
+        emailTasks.push(
+          sendCareerApplicationConfirmationEmail({
+            to: cleanEmail,
+            name: fullName.trim(),
+            referenceId: refId,
+            roles: rolesString || 'Staff Applicant',
+            phone: mobileNo.trim(),
+            qualification: qualification || 'N/A',
+            experience: expSummary,
+            city: address || 'Telangana',
+          })
+        );
+      }
+
+      // B. Instant alert to the internal HR / Admin team
+      emailTasks.push(
+        sendCareerAdminNotificationEmail({
+          candidateName: fullName.trim(),
+          candidateEmail: cleanEmail || undefined,
+          candidatePhone: mobileNo.trim(),
+          referenceId: refId,
+          roles: rolesString || 'Staff Applicant',
+          qualification: qualification || 'N/A',
+          experience: expSummary,
+          city: address || 'Telangana',
+          additionalNotes: additionalNotes || undefined,
+        })
+      );
+
+      // Execute in parallel without breaking response if email service has issues
+      const results = await Promise.allSettled(emailTasks);
+      const candidateEmailSent = results[0]?.status === 'fulfilled' && (results[0] as any).value?.success;
+      if (candidateEmailSent && data?.id) {
+        await supabaseAdmin
+          .from('leads')
+          .update({
+            internal_notes: `[EMAIL: confirmation | ${new Date().toISOString()}]`,
+          })
+          .eq('id', data.id);
+      }
+    } catch (emailErr) {
+      console.error('Non-blocking email dispatch error:', emailErr);
     }
 
     return NextResponse.json({

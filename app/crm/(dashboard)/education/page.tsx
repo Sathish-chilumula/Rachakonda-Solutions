@@ -161,26 +161,26 @@ function EducationContent() {
         </div>
       )}
 
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/20">
+      <div className="glass-panel rounded-3xl overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/40">
            <div className="relative w-full md:max-w-md">
-             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
              <input 
                type="text" 
                placeholder="Search enrollments..."
                value={search}
                onChange={(e) => setSearch(e.target.value)}
-               className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-semibold focus:ring-4 focus:ring-purple-500/5 focus:border-purple-500 outline-none transition-all"
+               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-semibold focus:ring-4 focus:ring-purple-500/5 focus:border-purple-500 outline-none transition-all"
              />
            </div>
 
            <div className="flex items-center gap-3">
              <div className="relative w-48">
-               <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+               <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                <select 
                  value={statusFilter}
                  onChange={(e) => setStatusFilter(e.target.value)}
-                 className="w-full pl-12 pr-10 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold appearance-none outline-none transition-all uppercase tracking-widest text-slate-500"
+                 className="w-full pl-12 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold appearance-none outline-none transition-all uppercase tracking-widest text-slate-600 cursor-pointer"
                >
                  <option value="all">Enrollment Status</option>
                  <option value="new">New Entry</option>
@@ -200,14 +200,14 @@ function EducationContent() {
                 <th className="w-16 px-6 py-5">
                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500" />
                 </th>
-                <th className="w-56 px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Student Identity</th>
+                <th className="sticky left-0 z-20 bg-[#FAFBFD] w-56 px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] shadow-[4px_0_12px_-4px_rgba(15,23,42,0.06)]">Student Identity</th>
                 <th className="w-48 px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Course Selection</th>
                 <th className="w-40 px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contact Details</th>
                 <th className="w-40 px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Enrollment Status</th>
-                <th className="w-32 px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Action</th>
+                <th className="sticky right-0 z-20 bg-[#FAFBFD] w-32 px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right shadow-[-4px_0_12px_-4px_rgba(15,23,42,0.06)]">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                  [1,2,3,4,5].map(i => (
                     <tr key={i} className="animate-pulse">
@@ -216,7 +216,7 @@ function EducationContent() {
                  ))
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center text-slate-300 font-black uppercase tracking-widest">No matching enrollments found</td>
+                  <td colSpan={6} className="px-6 py-20 text-center text-slate-400 font-bold uppercase tracking-widest">No matching enrollments found</td>
                 </tr>
               ) : (
                 filteredData.map((item) => (
@@ -224,40 +224,40 @@ function EducationContent() {
                     <td className="px-6 py-5">
                        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500" />
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="sticky left-0 z-10 bg-white group-hover:bg-purple-50/40 px-4 py-5 shadow-[4px_0_12px_-4px_rgba(15,23,42,0.06)]">
                        <div className="flex items-center gap-3">
                          <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-black text-xs shrink-0 transition-transform group-hover:scale-105">
-                           {item.name?.charAt(0).toUpperCase()}
+                           {item?.name?.charAt(0)?.toUpperCase() ?? 'S'}
                          </div>
                          <div className="min-w-0">
-                           <p className="text-sm font-bold text-slate-900 truncate">{item.name}</p>
-                           <p className="text-[11px] font-bold text-slate-400">{item.email}</p>
+                           <p className="text-sm font-bold text-slate-900 truncate">{item?.name ?? 'Unnamed Student'}</p>
+                           <p className="text-[11px] font-bold text-slate-400 truncate">{item?.email ?? 'No email'}</p>
                          </div>
                        </div>
                     </td>
                     <td className="px-4 py-5">
                        <div className="min-w-0">
                          <p className="text-xs font-black text-slate-700 truncate uppercase tracking-tight">
-                           {item.course_name}
+                           {item?.course_name ?? 'General'}
                          </p>
                          <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1 mt-1 truncate">
-                           <BookOpen className="w-3 h-3 text-slate-300" /> {item.category || 'General'}
+                           <BookOpen className="w-3 h-3 text-slate-300" /> {item?.category || 'General'}
                          </p>
                        </div>
                     </td>
                     <td className="px-4 py-5">
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-900">{item.phone}</span>
+                          <span className="text-xs font-bold text-slate-900 tabular-nums">{item?.phone ?? '—'}</span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Primary Phone</span>
                         </div>
                     </td>
                     <td className="px-4 py-5">
                         <select 
-                          value={item.status}
+                          value={item?.status ?? 'new'}
                           onChange={(e) => handleStatusUpdate(item.id, e.target.value)}
                           className={cn(
-                            "w-full border-none text-[10px] font-black uppercase tracking-widest rounded-xl py-2 pl-3 pr-8 appearance-none shadow-sm",
-                            getStatusStyle(item.status)
+                            "w-full border-none text-[10px] font-black uppercase tracking-widest rounded-xl py-2 pl-3 pr-8 appearance-none shadow-xs cursor-pointer",
+                            getStatusStyle(item?.status ?? 'new')
                           )}
                         >
                           <option value="new">New Entry</option>
@@ -266,19 +266,22 @@ function EducationContent() {
                           <option value="rejected">Rejected</option>
                         </select>
                     </td>
-                    <td className="px-4 py-5">
-                       <div className="flex items-center gap-2">
-                         <a href={`tel:${item.phone}`} className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-purple-600 hover:text-white transition-all">
-                           <PhoneCall className="w-4 h-4" />
-                         </a>
-                         <Link href={`/crm/enrollments/${item.id}`} className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
-                           <ChevronRight className="w-4 h-4" />
+                    <td className="sticky right-0 z-10 bg-white group-hover:bg-purple-50/40 px-4 py-5 shadow-[-4px_0_12px_-4px_rgba(15,23,42,0.06)] text-right">
+                       <div className="inline-flex items-center gap-1.5 justify-end">
+                         {item?.phone && (
+                           <a href={`tel:${item.phone}`} className="p-2 rounded-xl bg-slate-50 text-slate-500 hover:bg-purple-600 hover:text-white transition-all" title="Call">
+                             <PhoneCall className="w-3.5 h-3.5" />
+                           </a>
+                         )}
+                         <Link href={`/crm/enrollments/${item.id}`} className="p-2 rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-900 hover:text-white transition-all" title="View">
+                           <ChevronRight className="w-3.5 h-3.5" />
                          </Link>
                          <button 
                            onClick={() => handleDelete(item.id)}
-                           className="p-2.5 rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                           className="p-2 rounded-xl bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition-all"
+                           title="Delete"
                          >
-                           <Trash2 className="w-4 h-4" />
+                           <Trash2 className="w-3.5 h-3.5" />
                          </button>
                        </div>
                     </td>

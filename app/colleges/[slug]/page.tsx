@@ -1,12 +1,14 @@
 'use client';
 
+import { use } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { MapPin, CheckCircle, GraduationCap, Building2, Briefcase, ChevronRight } from 'lucide-react';
 import { getCollegeBySlug } from '@/lib/data/colleges';
 
-export default function CollegeDetailPage({ params }: { params: { slug: string } }) {
-  const college = getCollegeBySlug(params.slug);
+export default function CollegeDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
+  const college = getCollegeBySlug(slug);
 
   if (!college) {
     notFound();

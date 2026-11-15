@@ -18,6 +18,22 @@ export interface CandidateItem {
   internalNotes: string;
   createdAt: string;
   rawRemarks: string;
+  emailStatus: 'sent' | 'unsent';
+  emailSentAt: string | null;
+  lastEmailType: 'confirmation' | 'interview' | 'rejected' | null;
+}
+
+/**
+ * Appends an email audit tag to internal_notes so no duplicates are sent.
+ */
+export function recordEmailLogTag(
+  existingNotes: string | null | undefined,
+  type: 'confirmation' | 'interview' | 'rejected'
+): string {
+  const now = new Date().toISOString();
+  const tag = `[EMAIL: ${type} | ${now}]`;
+  const clean = (existingNotes || '').replace(/\[EMAIL:\s*[^\]]+\]/gi, '').trim();
+  return clean ? `${tag}\n${clean}` : tag;
 }
 
 export function parseCandidateLead(lead: any): CandidateItem {
@@ -60,6 +76,19 @@ export function parseCandidateLead(lead: any): CandidateItem {
   else if (lead.status === 'rejected') statusLabel = 'Rejected';
   else if (lead.status === 'contacted') statusLabel = 'Interview Scheduled';
 
+  // Email log parsing from internal_notes or remarks
+  const internalNotes = lead.internal_notes || '';
+  let emailStatus: 'sent' | 'unsent' = 'unsent';
+  let emailSentAt: string | null = null;
+  let lastEmailType: 'confirmation' | 'interview' | 'rejected' | null = null;
+
+  const emailMatch = internalNotes.match(/\[EMAIL:\s*(\w+)\s*\|\s*([^\]]+)\]/i);
+  if (emailMatch) {
+    emailStatus = 'sent';
+    lastEmailType = emailMatch[1].toLowerCase() as any;
+    emailSentAt = emailMatch[2].trim();
+  }
+
   return {
     id: lead.id,
     refId,
@@ -77,9 +106,12 @@ export function parseCandidateLead(lead: any): CandidateItem {
     status: (lead.status as any) || 'new',
     statusLabel,
     priority: lead.priority || 'hot',
-    internalNotes: lead.internal_notes || '',
+    internalNotes: internalNotes,
     createdAt: lead.created_at || new Date().toISOString(),
     rawRemarks: remarks,
+    emailStatus,
+    emailSentAt,
+    lastEmailType,
   };
 }
 

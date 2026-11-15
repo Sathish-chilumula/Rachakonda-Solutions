@@ -200,12 +200,14 @@ export default function Header() {
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center gap-3">
             <Link
-              href="/login"
-              className={`text-sm font-medium transition-colors ${
-                isLight ? 'text-slate-500 hover:text-slate-900' : 'text-white/80 hover:text-white'
+              href="/crm/login"
+              className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-xl border ${
+                isLight 
+                  ? 'text-slate-700 hover:text-blue-700 border-slate-200 hover:bg-slate-50' 
+                  : 'text-white/90 hover:text-white border-white/20 hover:bg-white/10'
               }`}
             >
-              Sign In
+              Staff Login
             </Link>
             <Link
               href="/contact"

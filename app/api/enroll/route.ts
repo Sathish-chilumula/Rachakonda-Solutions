@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { sendCounselingInquiryEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +52,16 @@ export async function POST(request: NextRequest) {
       ])
       .select()
       .single();
+
+    // 3. Automated counseling acknowledgment email (sent from admissions@rachakondasolutions.com)
+    if (email && email.includes('@')) {
+      sendCounselingInquiryEmail({
+        to: email.trim(),
+        name: name.trim(),
+        course,
+        category: category || 'Education Guidance',
+      }).catch((e) => console.error('Counseling email dispatch error:', e));
+    }
 
     return NextResponse.json({
       success: true,

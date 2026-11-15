@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { JOB_ROLES } from '@/lib/data/careers';
 import { CandidateItem, parseCandidateLead, exportCandidatesToCSV } from '@/lib/candidate-utils';
+import CandidatesTable from '@/components/crm/CandidatesTable';
 import Link from 'next/link';
 import { useCRM } from '../context';
 
@@ -55,6 +56,15 @@ export default function CandidatesAdminPage() {
   const [candidateToDelete, setCandidateToDelete] = useState<CandidateItem | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // Email status filter & batch sending states
+  const [emailFilter, setEmailFilter] = useState<'all' | 'sent' | 'unsent'>('all');
+  const [isSendingBatch, setIsSendingBatch] = useState<boolean>(false);
+  const [emailModalCandidate, setEmailModalCandidate] = useState<CandidateItem | null>(null);
+  const [emailTypeToDispatch, setEmailTypeToDispatch] = useState<'confirmation' | 'interview' | 'rejected'>('confirmation');
+  const [interviewDateInput, setInterviewDateInput] = useState<string>('Within 3 Business Days (10:00 AM - 4:00 PM)');
+  const [customNotesInput, setCustomNotesInput] = useState<string>('');
+  const [isDispatchingSingleEmail, setIsDispatchingSingleEmail] = useState<boolean>(false);
 
   const showToast = (msg: string) => {
     setActionSuccessMessage(msg);
@@ -265,23 +275,28 @@ export default function CandidatesAdminPage() {
       const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
       const matchesRole =
         roleFilter === 'all' ||
-        item.roles.some((r) => r.toLowerCase().includes(roleFilter.toLowerCase())) ||
-        item.rolesString.toLowerCase().includes(roleFilter.toLowerCase());
+        (Array.isArray(item.roles) && item.roles.some((r) => String(r || '').toLowerCase().includes(roleFilter.toLowerCase()))) ||
+        String(item.rolesString || '').toLowerCase().includes(roleFilter.toLowerCase());
 
-      const q = search.toLowerCase();
+      const q = (search || '').toLowerCase();
       const matchesSearch =
         !search ||
-        item.name.toLowerCase().includes(q) ||
-        item.phone.includes(q) ||
-        item.email.toLowerCase().includes(q) ||
-        item.refId.toLowerCase().includes(q) ||
-        item.fatherName.toLowerCase().includes(q) ||
-        item.address.toLowerCase().includes(q) ||
-        item.rolesString.toLowerCase().includes(q);
+        String(item.name || '').toLowerCase().includes(q) ||
+        String(item.phone || '').includes(q) ||
+        String(item.email || '').toLowerCase().includes(q) ||
+        String(item.refId || '').toLowerCase().includes(q) ||
+        String(item.fatherName || '').toLowerCase().includes(q) ||
+        String(item.address || '').toLowerCase().includes(q) ||
+        String(item.rolesString || '').toLowerCase().includes(q);
 
-      return matchesStatus && matchesRole && matchesSearch;
+      const matchesEmail =
+        emailFilter === 'all' ||
+        (emailFilter === 'sent' && item.emailStatus === 'sent') ||
+        (emailFilter === 'unsent' && item.emailStatus === 'unsent');
+
+      return matchesStatus && matchesRole && matchesSearch && matchesEmail;
     });
-  }, [candidates, statusFilter, roleFilter, search]);
+  }, [candidates, statusFilter, roleFilter, search, emailFilter]);
 
   // Counts for KPI
   const stats = useMemo(() => {
@@ -290,7 +305,9 @@ export default function CandidatesAdminPage() {
     const rejected = candidates.filter((c) => c.status === 'rejected').length;
     const interviewed = candidates.filter((c) => c.status === 'contacted').length;
     const newApps = candidates.filter((c) => c.status === 'new').length;
-    return { total, selected, rejected, interviewed, newApps };
+    const emailSent = candidates.filter((c) => c.emailStatus === 'sent').length;
+    const emailUnsent = candidates.filter((c) => c.emailStatus === 'unsent').length;
+    return { total, selected, rejected, interviewed, newApps, emailSent, emailUnsent };
   }, [candidates]);
 
   const handleExportAll = () => {
@@ -319,6 +336,78 @@ export default function CandidatesAdminPage() {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+  };
+
+  // Batch Email Sender (Respects Resend 100/day limit, e.g. 90/day)
+  const handleBatchSendConfirmation = async (batchLimit = 90) => {
+    if (stats.emailUnsent === 0) {
+      alert('All candidates have already received their confirmation emails! Zero pending.');
+      return;
+    }
+
+    const countToSend = Math.min(batchLimit, stats.emailUnsent);
+    const confirmed = window.confirm(
+      `Send confirmation emails to the next ${countToSend} unsent candidates?\n\n` +
+      `• Sender: careers@rachakondasolutions.com\n` +
+      `• Free Resend quota: 100 emails/day\n` +
+      `• Batch size: ${countToSend}\n` +
+      `• Remaining for subsequent days: ${Math.max(0, stats.emailUnsent - countToSend)}\n` +
+      `• Duplicates protection: Previously emailed candidates are automatically skipped.`
+    );
+
+    if (!confirmed) return;
+
+    setIsSendingBatch(true);
+    try {
+      const res = await fetch('/api/crm/candidates/batch-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batchSize: countToSend }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`🎉 Success: ${data.sentInThisBatch} confirmation emails dispatched!`);
+        fetchCandidates();
+      } else {
+        alert(`Batch sending error: ${data.error || 'Failed to dispatch batch'}`);
+      }
+    } catch (e: any) {
+      alert(`Batch exception: ${e.message}`);
+    } finally {
+      setIsSendingBatch(false);
+    }
+  };
+
+  // Dispatch individual email from Modal
+  const handleDispatchSingleEmail = async () => {
+    if (!emailModalCandidate) return;
+    setIsDispatchingSingleEmail(true);
+    try {
+      const res = await fetch('/api/crm/candidates/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidateId: emailModalCandidate.id,
+          emailType: emailTypeToDispatch,
+          interviewDate: interviewDateInput || undefined,
+          customNotes: customNotesInput || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`✉️ Email dispatched to ${emailModalCandidate.name}!`);
+        setEmailModalCandidate(null);
+        fetchCandidates();
+      } else {
+        alert(`Email dispatch error: ${data.error || 'Failed to dispatch email'}`);
+      }
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    } finally {
+      setIsDispatchingSingleEmail(false);
+    }
   };
 
   return (
@@ -565,325 +654,32 @@ export default function CandidatesAdminPage() {
       </div>
 
       {/* ─── Candidates Table / List ─────────────────────────────────────── */}
-      <div className="bg-white rounded-3xl shadow-xs border border-slate-200/80 overflow-hidden">
+      <div className="glass-panel rounded-3xl overflow-hidden">
         {loading ? (
           <div className="py-24 text-center">
             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-sm font-bold text-slate-500">Loading candidate applications...</p>
-          </div>
-        ) : filteredCandidates.length === 0 ? (
-          <div className="py-20 text-center px-4">
-            <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-900">No candidate applications found</h3>
-            <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-              {search || statusFilter !== 'all' || roleFilter !== 'all'
-                ? 'Try adjusting your search criteria or clear the filters to see all applications.'
-                : 'No candidates have submitted applications yet. When visitors fill the walk-in drive form on /careers, they will appear here instantly!'}
-            </p>
-            {(search || statusFilter !== 'all' || roleFilter !== 'all') && (
-              <button
-                onClick={() => {
-                  setSearch('');
-                  setStatusFilter('all');
-                  setRoleFilter('all');
-                }}
-                className="mt-4 px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-100"
-              >
-                Reset All Filters
-              </button>
-            )}
+            <p className="text-sm font-bold text-slate-500 font-display">Loading candidate applications...</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/80 text-[11px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                  <th className="py-4 px-4 w-12 text-center">
-                    <input
-                      type="checkbox"
-                      checked={
-                        filteredCandidates.length > 0 &&
-                        selectedIds.length === filteredCandidates.length
-                      }
-                      onChange={toggleSelectAll}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
-                    />
-                  </th>
-                  <th className="py-4 px-4">Candidate &amp; Father Name</th>
-                  <th className="py-4 px-4">Applied Position(s)</th>
-                  <th className="py-4 px-4">Contact Info</th>
-                  <th className="py-4 px-4">Qual &amp; Experience</th>
-                  <th className="py-4 px-4">Address</th>
-                  <th className="py-4 px-4">Applied Date &amp; Time</th>
-                  <th className="py-4 px-4">Recruitment Status</th>
-                  <th className="py-4 px-4 text-center">Admin Selection Actions</th>
-                  <th className="py-4 px-4 text-right">Application Slip</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredCandidates.map((candidate) => {
-                  const isSelected = selectedIds.includes(candidate.id);
-                  const isSelectedHired = candidate.status === 'converted';
-                  const isRejected = candidate.status === 'rejected';
-                  const isInterview = candidate.status === 'contacted';
-
-                  return (
-                    <tr
-                      key={candidate.id}
-                      className={`hover:bg-slate-50/70 transition-colors ${
-                        isSelected ? 'bg-blue-50/40' : isSelectedHired ? 'bg-emerald-50/20' : ''
-                      }`}
-                    >
-                      {/* Checkbox */}
-                      <td className="py-4 px-4 text-center">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelectOne(candidate.id)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
-                        />
-                      </td>
-
-                      {/* Candidate Name & Father */}
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-slate-900 hover:text-blue-600 cursor-pointer" onClick={() => setActiveModalCandidate(candidate)}>
-                              {candidate.name}
-                            </span>
-                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600">
-                              {candidate.gender}
-                            </span>
-                          </div>
-                          <span className="text-xs text-slate-500 mt-0.5 font-medium">
-                            S/o: <strong className="text-slate-700">{candidate.fatherName}</strong>
-                          </span>
-                          <span className="text-[10px] font-mono font-bold text-blue-700 mt-1">
-                            {candidate.refId}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Applied Positions (Multi-select badges) */}
-                      <td className="py-4 px-4 max-w-xs">
-                        <div className="flex flex-wrap gap-1.5">
-                          {candidate.roles.map((r, i) => (
-                            <span
-                              key={i}
-                              className="text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200/60 leading-tight"
-                            >
-                              {r}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-
-                      {/* Contact Info (Phone + WhatsApp + Mail) */}
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={`tel:${candidate.phone}`}
-                              className="font-bold text-slate-900 hover:text-blue-600 text-xs flex items-center gap-1"
-                            >
-                              <Phone className="w-3.5 h-3.5 text-slate-400" />
-                              {candidate.phone}
-                            </a>
-                            <a
-                              href={`https://wa.me/91${candidate.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                                `Hello ${candidate.name}, Greetings from Rachakonda Solutions Pvt Ltd regarding your job application (${candidate.refId}) for ${candidate.rolesString}.`
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                              title="Chat on WhatsApp"
-                            >
-                              <MessageSquare className="w-3 h-3" /> WhatsApp
-                            </a>
-                          </div>
-                          {candidate.email && candidate.email !== 'N/A' && (
-                            <a
-                              href={`mailto:${candidate.email}`}
-                              className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1 truncate max-w-[180px]"
-                            >
-                              <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                              {candidate.email}
-                            </a>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Qualification & Experience */}
-                      <td className="py-4 px-4 min-w-[200px]">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black text-slate-900">
-                            {candidate.qualification}
-                          </span>
-                          <div className="mt-1">
-                            {candidate.experience.toLowerCase() === 'fresher' ? (
-                              <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                                Fresher
-                              </span>
-                            ) : (
-                              <span
-                                className="inline-flex items-center text-[11px] font-bold px-2 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 leading-tight"
-                                title={candidate.experience}
-                              >
-                                💼 {candidate.experience}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Address */}
-                      <td className="py-4 px-4 max-w-[160px]">
-                        <p className="text-xs text-slate-600 truncate font-medium" title={candidate.address}>
-                          {candidate.address}
-                        </p>
-                      </td>
-
-                      {/* Applied Date & Time */}
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-black text-slate-900">
-                              {new Date(candidate.createdAt).toLocaleDateString('en-IN', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })}
-                            </span>
-                            {new Date(candidate.createdAt).toDateString() === new Date().toDateString() && (
-                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                Today
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[11px] text-blue-700 font-bold mt-0.5">
-                            {new Date(candidate.createdAt).toLocaleTimeString('en-IN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true,
-                            })}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Current Status Badge */}
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        {isSelectedHired && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            Selected / Hired 🟢
-                          </span>
-                        )}
-                        {isRejected && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-red-100 text-red-800 border border-red-300">
-                            <XCircle className="w-3.5 h-3.5 text-red-600" />
-                            Rejected 🔴
-                          </span>
-                        )}
-                        {isInterview && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300">
-                            <Clock className="w-3.5 h-3.5 text-amber-600" />
-                            Interview Scheduled 🟡
-                          </span>
-                        )}
-                        {!isSelectedHired && !isRejected && !isInterview && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-200">
-                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                            New Application 🔵
-                          </span>
-                        )}
-                      </td>
-
-                      {/* ─── Admin Selection Actions (The core requirement) ─── */}
-                      <td className="py-4 px-4 text-center">
-                        <div className="inline-flex items-center justify-center gap-1.5 p-1 bg-slate-100 rounded-xl">
-                          {/* Mark Selected Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(candidate.id, candidate.name, 'converted')}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                              isSelectedHired
-                                ? 'bg-emerald-600 text-white shadow-xs'
-                                : 'text-emerald-700 hover:bg-emerald-100'
-                            }`}
-                            title="Mark candidate as Selected / Hired"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Select</span>
-                          </button>
-
-                          {/* Schedule Interview */}
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(candidate.id, candidate.name, 'contacted')}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                              isInterview
-                                ? 'bg-amber-500 text-white shadow-xs'
-                                : 'text-amber-700 hover:bg-amber-100'
-                            }`}
-                            title="Schedule for interview"
-                          >
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>Interview</span>
-                          </button>
-
-                          {/* Mark Rejected Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(candidate.id, candidate.name, 'rejected')}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                              isRejected
-                                ? 'bg-red-600 text-white shadow-xs'
-                                : 'text-red-700 hover:bg-red-100'
-                            }`}
-                            title="Mark candidate as Rejected"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
-
-                          {/* Permanently Delete Button (With Confirmation Safeguard) */}
-                          <button
-                            type="button"
-                            onClick={() => setCandidateToDelete(candidate)}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 cursor-pointer text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 shadow-2xs"
-                            title="Permanently Delete Candidate (Confirmation required)"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-red-500 group-hover:text-white" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      </td>
-
-                      {/* View Application Slip */}
-                      <td className="py-4 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setActiveModalCandidate(candidate)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-colors cursor-pointer border border-slate-200 shadow-2xs"
-                          title="View Official Application Slip"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-slate-500" />
-                          <span>View Slip</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <CandidatesTable
+            candidates={filteredCandidates}
+            selectedIds={selectedIds}
+            onToggleSelect={(id) => toggleSelectOne(id)}
+            onToggleSelectAll={toggleSelectAll}
+            onViewCandidate={(c) => setActiveModalCandidate(c)}
+            onUpdateStatus={(id, status) => {
+              const c = candidates.find((item) => item.id === id);
+              handleUpdateStatus(id, c?.name || 'Candidate', status);
+            }}
+            onDeleteRequest={(c) => setCandidateToDelete(c)}
+          />
         )}
 
         {/* Footer summary */}
-        <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 font-semibold gap-2">
+        <div className="p-4 bg-slate-50/80 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 font-semibold gap-2">
           <span>
-            Showing <strong className="text-slate-900">{filteredCandidates.length}</strong> of{' '}
-            <strong className="text-slate-900">{candidates.length}</strong> total candidate applications
+            Showing <strong className="text-slate-900 tabular-nums">{filteredCandidates.length}</strong> of{' '}
+            <strong className="text-slate-900 tabular-nums">{candidates.length}</strong> total candidate applications
           </span>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">

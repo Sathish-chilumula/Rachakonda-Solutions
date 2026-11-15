@@ -29,7 +29,10 @@ import {
   Eye,
   FileText,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Award,
+  Printer,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -37,9 +40,31 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useCRM } from '../context';
 import { CandidateItem, parseCandidateLead, exportCandidatesToCSV } from '@/lib/candidate-utils';
+import CandidatesTable from '@/components/crm/CandidatesTable';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+function formatSafeDate(dateStr?: string | null): string {
+  if (!dateStr) return '—';
+  const parsed = new Date(dateStr);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatSafeTime(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const parsed = new Date(dateStr);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+function isSafeToday(dateStr?: string | null): boolean {
+  if (!dateStr) return false;
+  const parsed = new Date(dateStr);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.toDateString() === new Date().toDateString();
 }
 
 function LeadsContent() {
@@ -55,6 +80,8 @@ function LeadsContent() {
   const [candidates, setCandidates] = useState<CandidateItem[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [counselingLeads, setCounselingLeads] = useState<any[]>([]);
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+  const [activeModalCandidate, setActiveModalCandidate] = useState<CandidateItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -145,7 +172,7 @@ function LeadsContent() {
         setCandidateToDelete(null);
       } else {
         const err = await res.json();
-        alert(`Error: ${err.error}`);
+        alert(`Error: ${err.error || 'Failed to delete'}`);
       }
     } catch (e: any) {
       alert(`Delete error: ${e.message}`);
@@ -204,6 +231,8 @@ function LeadsContent() {
         prev.map((s) => (s.id === id ? { ...s, status } : s))
       );
       showToast(`Student status updated to ${status}`);
+    } else {
+      alert(`Error: ${error.message}`);
     }
   };
 
@@ -218,48 +247,50 @@ function LeadsContent() {
       setCounselingLeads((prev) =>
         prev.map((l) => (l.id === id ? { ...l, status } : l))
       );
-      showToast(`Inquiry marked as ${status}`);
+      showToast(`Inquiry status updated to ${status}`);
+    } else {
+      alert(`Error: ${error.message}`);
     }
   };
 
   // Export handlers
   const handleExportCandidates = () => {
-    exportCandidatesToCSV(candidates, 'Rachakonda_Candidates_95_Staff');
+    exportCandidatesToCSV(
+      filteredCandidates,
+      'Rachakonda_Candidates_Walkin_95_Staff'
+    );
   };
 
   const handleExportStudents = () => {
     if (students.length === 0) return alert('No students to export.');
-    const headers = ['S.No', 'Student Name', 'Phone', 'Email', 'Course', 'Category', 'Status', 'Date'];
-    const rows = students.map((s, idx) => [
-      `"${idx + 1}"`,
+    const headers = ['Student Name', 'Course', 'Category', 'Status', 'Date'];
+    const rows = students.map((s) => [
       `"${s.name || ''}"`,
-      `"${s.phone || ''}"`,
-      `"${s.email || ''}"`,
       `"${s.course_name || ''}"`,
       `"${s.category || ''}"`,
       `"${s.status || ''}"`,
-      `"${s.created_at ? new Date(s.created_at).toLocaleDateString('en-IN') : 'N/A'}"`,
+      `"${formatSafeDate(s.created_at)}"`,
     ]);
     const csv = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Rachakonda_Student_Enrollments_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `Rachakonda_Student_Admissions_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
   };
 
   const handleExportCounseling = () => {
     if (counselingLeads.length === 0) return alert('No inquiries to export.');
-    const headers = ['S.No', 'Visitor Name', 'Phone', 'Subject', 'Details / Message', 'Status', 'Date'];
-    const rows = counselingLeads.map((l, idx) => [
-      `"${idx + 1}"`,
+    const headers = ['Name', 'Phone', 'City', 'Subject', 'Message', 'Status', 'Date'];
+    const rows = counselingLeads.map((l) => [
       `"${l.name || ''}"`,
       `"${l.phone || ''}"`,
+      `"${l.city || ''}"`,
       `"${l.designation || 'General'}"`,
       `"${(l.remarks || '').replace(/"/g, '""')}"`,
       `"${l.status || 'new'}"`,
-      `"${l.created_at ? new Date(l.created_at).toLocaleDateString('en-IN') : 'N/A'}"`,
+      `"${formatSafeDate(l.created_at)}"`,
     ]);
     const csv = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -270,17 +301,17 @@ function LeadsContent() {
     a.click();
   };
 
-  // Filtered views
+  // Filtered views with crash-proof String() conversions
   const filteredCandidates = useMemo(() => {
     return candidates.filter((c) => {
       const matchStatus = statusFilter === 'all' || c.status === statusFilter;
-      const q = search.toLowerCase();
+      const q = (search || '').toLowerCase();
       const matchSearch =
         !search ||
-        c.name.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
-        c.rolesString.toLowerCase().includes(q) ||
-        c.refId.toLowerCase().includes(q);
+        String(c.name || '').toLowerCase().includes(q) ||
+        String(c.phone || '').includes(q) ||
+        String(c.rolesString || '').toLowerCase().includes(q) ||
+        String(c.refId || '').toLowerCase().includes(q);
       return matchStatus && matchSearch;
     });
   }, [candidates, statusFilter, search]);
@@ -288,12 +319,12 @@ function LeadsContent() {
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
       const matchStatus = statusFilter === 'all' || s.status === statusFilter;
-      const q = search.toLowerCase();
+      const q = (search || '').toLowerCase();
       const matchSearch =
         !search ||
-        (s.name || '').toLowerCase().includes(q) ||
-        (s.phone || '').includes(q) ||
-        (s.course_name || '').toLowerCase().includes(q);
+        String(s?.name || '').toLowerCase().includes(q) ||
+        String(s?.phone || '').includes(q) ||
+        String(s?.course_name || '').toLowerCase().includes(q);
       return matchStatus && matchSearch;
     });
   }, [students, statusFilter, search]);
@@ -301,14 +332,14 @@ function LeadsContent() {
   const filteredCounseling = useMemo(() => {
     return counselingLeads.filter((l) => {
       const matchStatus = statusFilter === 'all' || l.status === statusFilter;
-      const q = search.toLowerCase();
+      const q = (search || '').toLowerCase();
       const matchSearch =
         !search ||
-        (l.name || '').toLowerCase().includes(q) ||
-        (l.phone || '').includes(q) ||
-        (l.city || '').toLowerCase().includes(q) ||
-        (l.designation || '').toLowerCase().includes(q) ||
-        (l.remarks || '').toLowerCase().includes(q);
+        String(l?.name || '').toLowerCase().includes(q) ||
+        String(l?.phone || '').includes(q) ||
+        String(l?.city || '').toLowerCase().includes(q) ||
+        String(l?.designation || '').toLowerCase().includes(q) ||
+        String(l?.remarks || '').toLowerCase().includes(q);
       return matchStatus && matchSearch;
     });
   }, [counselingLeads, statusFilter, search]);
@@ -331,7 +362,7 @@ function LeadsContent() {
       </AnimatePresence>
 
       {/* ─── Header ─────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200">
+      <div className="glass-panel rounded-3xl p-6 sm:p-8">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-black uppercase tracking-wider mb-2">
@@ -348,23 +379,26 @@ function LeadsContent() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => fetchData()}
-              className="h-11 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-2"
+              onClick={fetchData}
+              disabled={loading}
+              className="h-11 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              title="Refresh current list"
             >
-              <RefreshCw className="w-4 h-4" /> Refresh
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
             </button>
 
             {activeTab === 'candidates' ? (
               <button
                 onClick={handleExportCandidates}
-                className="h-11 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2"
+                className="h-11 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer"
               >
                 <FileDown className="w-4 h-4" /> Export Candidates ({filteredCandidates.length})
               </button>
             ) : activeTab === 'students' ? (
               <button
                 onClick={handleExportStudents}
-                className="h-11 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2"
+                className="h-11 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer"
               >
                 <FileDown className="w-4 h-4" /> Export Students ({filteredStudents.length})
               </button>
@@ -383,7 +417,7 @@ function LeadsContent() {
         <div className="flex border-b border-slate-200 mt-6 gap-2">
           <button
             onClick={() => handleTabChange('candidates')}
-            className={`pb-3 px-4 text-sm font-black transition-all border-b-2 flex items-center gap-2 ${
+            className={`pb-3 px-4 text-sm font-black transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
               activeTab === 'candidates'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-slate-500 hover:text-slate-900'
@@ -398,7 +432,7 @@ function LeadsContent() {
 
           <button
             onClick={() => handleTabChange('students')}
-            className={`pb-3 px-4 text-sm font-black transition-all border-b-2 flex items-center gap-2 ${
+            className={`pb-3 px-4 text-sm font-black transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
               activeTab === 'students'
                 ? 'border-purple-600 text-purple-600'
                 : 'border-transparent text-slate-500 hover:text-slate-900'
@@ -413,7 +447,7 @@ function LeadsContent() {
 
           <button
             onClick={() => handleTabChange('counseling')}
-            className={`pb-3 px-4 text-sm font-black transition-all border-b-2 flex items-center gap-2 ${
+            className={`pb-3 px-4 text-sm font-black transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
               activeTab === 'counseling'
                 ? 'border-amber-600 text-amber-600'
                 : 'border-transparent text-slate-500 hover:text-slate-900'
@@ -429,7 +463,7 @@ function LeadsContent() {
       </div>
 
       {/* ─── Search & Status Filters ─────────────────────────────────── */}
-      <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="glass-panel rounded-3xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative w-full md:w-96">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
@@ -446,7 +480,7 @@ function LeadsContent() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === s
                   ? 'bg-slate-900 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -458,165 +492,43 @@ function LeadsContent() {
         </div>
       </div>
 
-      {/* ─── Content Tab 1: Candidates ───────────────────────────────── */}
+      {/* ─── Content Tab 1: Candidates (Unified Responsive CandidatesTable) ───────────────────────────────── */}
       {activeTab === 'candidates' && (
-        <div className="bg-white rounded-3xl shadow-xs border border-slate-200 overflow-hidden">
+        <div className="glass-panel rounded-3xl overflow-hidden">
           {loading ? (
-            <div className="py-20 text-center text-sm font-bold text-slate-500">Loading candidates...</div>
-          ) : filteredCandidates.length === 0 ? (
-            <div className="py-16 text-center text-sm text-slate-500 font-medium">
-              No candidates found matching criteria.
-            </div>
+            <div className="py-20 text-center text-sm font-bold text-slate-500 font-display">Loading candidates...</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/80 text-[11px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                    <th className="py-4 px-4">Candidate &amp; Father Name</th>
-                    <th className="py-4 px-4">Applied Role(s)</th>
-                    <th className="py-4 px-4">Contact</th>
-                    <th className="py-4 px-4">Qualification &amp; Exp</th>
-                    <th className="py-4 px-4">Applied Date</th>
-                    <th className="py-4 px-4">Status</th>
-                    <th className="py-4 px-4 text-center">Admin Selection Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {filteredCandidates.map((c) => {
-                    const isSelected = c.status === 'converted';
-                    const isRejected = c.status === 'rejected';
-                    const isInterview = c.status === 'contacted';
-
-                    return (
-                      <tr key={c.id} className="hover:bg-slate-50/70">
-                        <td className="py-4 px-4">
-                          <p className="font-extrabold text-slate-900">{c.name}</p>
-                          <p className="text-xs text-slate-500">S/o: {c.fatherName} &bull; <span className="font-mono text-blue-700">{c.refId}</span></p>
-                        </td>
-
-                        <td className="py-4 px-4 max-w-xs">
-                          <div className="flex flex-wrap gap-1">
-                            {c.roles.map((r, i) => (
-                              <span key={i} className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200">
-                                {r}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs">{c.phone}</span>
-                            <a
-                              href={`https://wa.me/91${c.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hello ${c.name}, Greetings from Rachakonda Solutions.`)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                            >
-                              WhatsApp
-                            </a>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4 min-w-[180px]">
-                          <p className="text-xs font-black text-slate-900">{c.qualification}</p>
-                          <div className="mt-1">
-                            {c.experience.toLowerCase() === 'fresher' ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                                Fresher
-                              </span>
-                            ) : (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-300">
-                                💼 {c.experience}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-black text-slate-900">
-                              {new Date(c.createdAt).toLocaleDateString('en-IN', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })}
-                            </span>
-                            {new Date(c.createdAt).toDateString() === new Date().toDateString() && (
-                              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800">
-                                Today
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[11px] text-blue-700 font-bold block">
-                            {new Date(c.createdAt).toLocaleTimeString('en-IN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true,
-                            })}
-                          </span>
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <span className={`text-xs font-black px-2.5 py-1 rounded-full ${
-                            isSelected ? 'bg-emerald-100 text-emerald-800' : isRejected ? 'bg-red-100 text-red-800' : isInterview ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {c.statusLabel}
-                          </span>
-                        </td>
-
-                        <td className="py-4 px-4 text-center">
-                          <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
-                            <button
-                              onClick={() => handleCandidateStatus(c.id, c.name, 'converted')}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                                isSelected ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 hover:bg-emerald-100'
-                              }`}
-                            >
-                              Select 🟢
-                            </button>
-                            <button
-                              onClick={() => handleCandidateStatus(c.id, c.name, 'contacted')}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                                isInterview ? 'bg-amber-500 text-white shadow-xs' : 'text-amber-700 hover:bg-amber-100'
-                              }`}
-                            >
-                              Interview 🟡
-                            </button>
-                            <button
-                              onClick={() => handleCandidateStatus(c.id, c.name, 'rejected')}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                                isRejected ? 'bg-red-600 text-white shadow-xs' : 'text-red-700 hover:bg-red-100'
-                              }`}
-                            >
-                              Reject 🔴
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setCandidateToDelete(c)}
-                              className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 shadow-2xs"
-                              title="Permanently Delete Candidate (Confirmation required)"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <CandidatesTable
+              candidates={filteredCandidates}
+              selectedIds={selectedCandidateIds}
+              onToggleSelect={(id) =>
+                setSelectedCandidateIds((prev) =>
+                  prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+                )
+              }
+              onToggleSelectAll={() => {
+                if (selectedCandidateIds.length === filteredCandidates.length) {
+                  setSelectedCandidateIds([]);
+                } else {
+                  setSelectedCandidateIds(filteredCandidates.map((c) => c.id));
+                }
+              }}
+              onViewCandidate={(c) => setActiveModalCandidate(c)}
+              onUpdateStatus={(id, status) => {
+                const c = candidates.find((item) => item.id === id);
+                handleCandidateStatus(id, c?.name || 'Candidate', status);
+              }}
+              onDeleteRequest={(c) => setCandidateToDelete(c)}
+            />
           )}
         </div>
       )}
 
       {/* ─── Content Tab 2: Students ─────────────────────────────────── */}
       {activeTab === 'students' && (
-        <div className="bg-white rounded-3xl shadow-xs border border-slate-200 overflow-hidden">
+        <div className="glass-panel rounded-3xl overflow-hidden">
           {loading ? (
-            <div className="py-20 text-center text-sm font-bold text-slate-500">Loading student enrollments...</div>
+            <div className="py-20 text-center text-sm font-bold text-slate-500 font-display">Loading student enrollments...</div>
           ) : filteredStudents.length === 0 ? (
             <div className="py-16 text-center text-sm text-slate-500 font-medium">
               No student enrollments found.
@@ -626,41 +538,45 @@ function LeadsContent() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 text-[11px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                    <th className="py-4 px-4">Student Name</th>
-                    <th className="py-4 px-4">Course Name &amp; Category</th>
-                    <th className="py-4 px-4">Contact</th>
-                    <th className="py-4 px-4">Enrollment Date</th>
-                    <th className="py-4 px-4">Status</th>
-                    <th className="py-4 px-4 text-center">Action</th>
+                    <th className="sticky left-0 z-20 bg-slate-50/90 py-4 px-4 shadow-[4px_0_12px_-4px_rgba(15,23,42,0.06)]">Student Name</th>
+                    <th className="py-4 px-4 min-w-[170px]">Course Name &amp; Category</th>
+                    <th className="py-4 px-4 min-w-[160px]">Contact</th>
+                    <th className="py-4 px-4 min-w-[140px]">Enrollment Date</th>
+                    <th className="py-4 px-4 min-w-[150px]">Status</th>
+                    <th className="sticky right-0 z-20 bg-slate-50/90 py-4 px-4 text-center shadow-[-4px_0_12px_-4px_rgba(15,23,42,0.06)]">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {filteredStudents.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50/70">
-                      <td className="py-4 px-4 font-bold text-slate-900">{s.name}</td>
+                    <tr key={s.id} className="group hover:bg-slate-50/70 transition-colors">
+                      <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/80 py-4 px-4 font-bold text-slate-900 shadow-[4px_0_12px_-4px_rgba(15,23,42,0.06)]">
+                        {s?.name ? String(s.name) : 'Unnamed Student'}
+                      </td>
                       <td className="py-4 px-4">
-                        <p className="font-bold text-blue-900 text-xs">{s.course_name}</p>
-                        <p className="text-[11px] text-slate-500">{s.category}</p>
+                        <p className="font-bold text-blue-900 text-xs">{s?.course_name ? String(s.course_name) : 'Course'}</p>
+                        <p className="text-[11px] text-slate-500">{s?.category ? String(s.category) : 'General'}</p>
                       </td>
                       <td className="py-4 px-4 text-xs font-semibold">
-                        <a href={`tel:${s.phone}`} className="hover:text-blue-600">{s.phone}</a>
-                        {s.email && <p className="text-slate-400">{s.email}</p>}
+                        <a href={`tel:${s?.phone ?? ''}`} className="hover:text-blue-600 tabular-nums">
+                          {s?.phone ? String(s.phone) : '—'}
+                        </a>
+                        {s?.email && <p className="text-slate-400 truncate max-w-[160px]">{String(s.email)}</p>}
                       </td>
-                      <td className="py-4 px-4 text-xs text-slate-600">
-                        {new Date(s.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <td className="py-4 px-4 text-xs text-slate-600 tabular-nums">
+                        {formatSafeDate(s?.created_at)}
                       </td>
                       <td className="py-4 px-4">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                          s.status === 'converted' ? 'bg-emerald-100 text-emerald-800' : s.status === 'contacted' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                          s?.status === 'converted' ? 'bg-emerald-100 text-emerald-800' : s?.status === 'contacted' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
                         }`}>
-                          {s.status}
+                          {s?.status ? String(s.status) : 'new'}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-center">
+                      <td className="sticky right-0 z-10 bg-white group-hover:bg-slate-50/80 py-4 px-4 text-center shadow-[-4px_0_12px_-4px_rgba(15,23,42,0.06)]">
                         <select
-                          value={s.status}
+                          value={s?.status ?? 'new'}
                           onChange={(e) => handleStudentStatus(s.id, e.target.value)}
-                          className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1"
+                          className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-hidden"
                         >
                           <option value="new">New</option>
                           <option value="contacted">Contacted</option>
@@ -677,11 +593,11 @@ function LeadsContent() {
         </div>
       )}
 
-      {/* ─── Content Tab 3: Counseling Requests ──────────────────────── */}
+      {/* ─── Content Tab 3: Counseling Requests (Safe & Crash-Proof) ──────────────────────── */}
       {activeTab === 'counseling' && (
-        <div className="bg-white rounded-3xl shadow-xs border border-slate-200 overflow-hidden">
+        <div className="glass-panel rounded-3xl overflow-hidden">
           {loading ? (
-            <div className="py-20 text-center text-sm font-bold text-slate-500">Loading counseling requests...</div>
+            <div className="py-20 text-center text-sm font-bold text-slate-500 font-display">Loading counseling requests...</div>
           ) : filteredCounseling.length === 0 ? (
             <div className="py-16 text-center text-sm text-slate-500 font-medium">
               No counseling requests found.
@@ -691,41 +607,41 @@ function LeadsContent() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 text-[11px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                    <th className="py-4 px-4">Visitor Name</th>
-                    <th className="py-4 px-4">Inquiry Subject</th>
-                    <th className="py-4 px-4">Contact Info</th>
-                    <th className="py-4 px-4">Message / Details</th>
-                    <th className="py-4 px-4">Received Date</th>
-                    <th className="py-4 px-4">Inquiry Status</th>
-                    <th className="py-4 px-4 text-center">Manage</th>
+                    <th className="sticky left-0 z-20 bg-slate-50/90 py-4 px-4 shadow-[4px_0_12px_-4px_rgba(15,23,42,0.06)]">Visitor Name</th>
+                    <th className="py-4 px-4 min-w-[160px]">Inquiry Subject</th>
+                    <th className="py-4 px-4 min-w-[170px]">Contact Info</th>
+                    <th className="py-4 px-4 min-w-[220px]">Message / Details</th>
+                    <th className="py-4 px-4 min-w-[140px]">Received Date</th>
+                    <th className="py-4 px-4 min-w-[150px]">Inquiry Status</th>
+                    <th className="sticky right-0 z-20 bg-slate-50/90 py-4 px-4 text-center shadow-[-4px_0_12px_-4px_rgba(15,23,42,0.06)]">Manage</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {filteredCounseling.map((l) => (
-                    <tr key={l.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-4 px-4 font-bold text-slate-900">
+                    <tr key={l.id} className="group hover:bg-slate-50/70 transition-colors">
+                      <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/80 py-4 px-4 font-bold text-slate-900 shadow-[4px_0_12px_-4px_rgba(15,23,42,0.06)]">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 font-extrabold text-xs flex items-center justify-center shrink-0">
-                            {l.name ? l.name.charAt(0).toUpperCase() : 'V'}
+                            {l?.name ? String(l.name).charAt(0).toUpperCase() : 'V'}
                           </div>
-                          <span>{l.name || 'Anonymous Inquiry'}</span>
+                          <span className="truncate">{l?.name ? String(l.name) : 'Anonymous Inquiry'}</span>
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200/60">
-                          {l.designation || 'General Counseling'}
+                          {l?.designation ? String(l.designation) : 'General Counseling'}
                         </span>
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <a href={`tel:${l.phone || ''}`} className="font-bold text-slate-900 hover:text-blue-600 text-xs flex items-center gap-1">
+                            <a href={`tel:${l?.phone ?? ''}`} className="font-bold text-slate-900 hover:text-blue-600 text-xs flex items-center gap-1 tabular-nums">
                               <Phone className="w-3.5 h-3.5 text-slate-400" />
-                              {l.phone || 'N/A'}
+                              {l?.phone ? String(l.phone) : 'N/A'}
                             </a>
-                            {l.phone && (
+                            {l?.phone && (
                               <a
-                                href={`https://wa.me/91${(l.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(
+                                href={`https://wa.me/91${String(l.phone).replace(/\D/g, '')}?text=${encodeURIComponent(
                                   `Hello ${l.name || 'there'}, Greetings from Rachakonda Solutions regarding your counseling inquiry.`
                                 )}`}
                                 target="_blank"
@@ -740,30 +656,31 @@ function LeadsContent() {
                         </div>
                       </td>
                       <td className="py-4 px-4 text-xs text-slate-600 max-w-xs">
-                        <p className="line-clamp-2 leading-relaxed" title={l.remarks || ''}>
-                          {l.remarks || 'No additional message.'}
+                        <p className="line-clamp-2 leading-relaxed" title={l?.remarks ? String(l.remarks) : ''}>
+                          {l?.remarks ? String(l.remarks) : 'No additional message.'}
                         </p>
                       </td>
-                      <td className="py-4 px-4 whitespace-nowrap text-xs">
+                      <td className="py-4 px-4 whitespace-nowrap text-xs tabular-nums">
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-slate-800">
-                            {l.created_at ? new Date(l.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                            {formatSafeDate(l?.created_at)}
                           </span>
-                          {l.created_at && new Date(l.created_at).toDateString() === new Date().toDateString() && (
+                          {isSafeToday(l?.created_at) && (
                             <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                               Today
                             </span>
                           )}
                         </div>
+                        <div className="text-[11px] text-blue-700 font-medium">{formatSafeTime(l?.created_at)}</div>
                       </td>
                       <td className="py-4 px-4">
                         <select
-                          value={l.status || 'new'}
+                          value={l?.status ?? 'new'}
                           onChange={(e) => handleCounselingStatus(l.id, e.target.value)}
-                          className={`text-xs font-bold rounded-lg px-2.5 py-1 border transition-colors cursor-pointer ${
-                            l.status === 'converted'
+                          className={`text-xs font-bold rounded-lg px-2.5 py-1.5 border transition-colors cursor-pointer focus:outline-hidden ${
+                            l?.status === 'converted'
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                              : l.status === 'contacted'
+                              : l?.status === 'contacted'
                               ? 'bg-amber-50 text-amber-800 border-amber-300'
                               : 'bg-blue-50 text-blue-800 border-blue-200'
                           }`}
@@ -774,11 +691,11 @@ function LeadsContent() {
                           <option value="rejected">Archived ⚪</option>
                         </select>
                       </td>
-                      <td className="py-4 px-4 text-center">
+                      <td className="sticky right-0 z-10 bg-white group-hover:bg-slate-50/80 py-4 px-4 text-center shadow-[-4px_0_12px_-4px_rgba(15,23,42,0.06)]">
                         <button
                           type="button"
-                          onClick={() => setCandidateToDelete({ id: l.id, name: l.name || 'Anonymous', phone: l.phone || 'N/A', rolesString: l.designation || 'Inquiry', refId: 'INQUIRY' })}
-                          className="px-2.5 py-1 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1 mx-auto"
+                          onClick={() => setCandidateToDelete({ id: l.id, name: l?.name ? String(l.name) : 'Anonymous', phone: l?.phone ? String(l.phone) : 'N/A', rolesString: l?.designation ? String(l.designation) : 'Inquiry', refId: 'INQUIRY' })}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 shadow-2xs transition-all cursor-pointer mx-auto"
                           title="Delete inquiry"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -793,7 +710,103 @@ function LeadsContent() {
           )}
         </div>
       )}
-      {/* Accidental Deletion Protection Modal */}
+
+      {/* ─── Candidate Detail Modal Slip ─────────────────────────── */}
+      <AnimatePresence>
+        {activeModalCandidate && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setActiveModalCandidate(null)}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 z-10"
+            >
+              <div className="p-6 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-t-3xl relative">
+                <button
+                  onClick={() => setActiveModalCandidate(null)}
+                  className="absolute top-5 right-5 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-black uppercase tracking-wider mb-2">
+                  <Award className="w-3.5 h-3.5 text-amber-400" /> Official Application Slip
+                </div>
+                <h3 className="text-2xl font-black">{activeModalCandidate.name}</h3>
+                <p className="text-xs text-blue-200 mt-1 font-mono">
+                  Ref ID: {activeModalCandidate.refId} &bull; Applied on {formatSafeDate(activeModalCandidate.createdAt)}
+                </p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block font-semibold">Mobile</span>
+                    <span className="font-bold text-slate-900 tabular-nums">{activeModalCandidate.phone || 'N/A'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block font-semibold">Email</span>
+                    <span className="font-bold text-slate-900 truncate block">{activeModalCandidate.email || 'N/A'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block font-semibold">Father's Name</span>
+                    <span className="font-bold text-slate-900">{activeModalCandidate.fatherName || 'N/A'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block font-semibold">Qualification</span>
+                    <span className="font-bold text-slate-900">{activeModalCandidate.qualification || 'N/A'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block font-semibold">Experience</span>
+                    <span className="font-bold text-slate-900">{activeModalCandidate.experience || 'Fresher'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block font-semibold">Location / Address</span>
+                    <span className="font-bold text-slate-900">{activeModalCandidate.address || 'N/A'}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-200/60">
+                  <span className="text-xs font-bold text-blue-800 uppercase tracking-wider block mb-2">Applied Roles</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeModalCandidate.roles.map((r) => (
+                      <span key={r} className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white text-blue-900 border border-blue-200 shadow-2xs">
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Print
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveModalCandidate(null)}
+                    className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Accidental Deletion Protection Modal ──────────────────────── */}
       <AnimatePresence>
         {candidateToDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -838,7 +851,7 @@ function LeadsContent() {
                   type="button"
                   disabled={isDeleting}
                   onClick={() => setCandidateToDelete(null)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -846,7 +859,7 @@ function LeadsContent() {
                   type="button"
                   disabled={isDeleting}
                   onClick={handleConfirmDeleteCandidate}
-                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-md"
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {isDeleting ? 'Deleting...' : (candidateToDelete.refId === 'INQUIRY' ? 'Yes, Delete Inquiry' : 'Yes, Delete Application')}
                 </button>

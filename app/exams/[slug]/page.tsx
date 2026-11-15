@@ -1,12 +1,14 @@
 'use client';
 
+import { use } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Calendar, FileText, CheckCircle, ChevronRight, GraduationCap, Link as LinkIcon } from 'lucide-react';
 import { getExamBySlug } from '@/lib/data/exams';
 
-export default function ExamDetailPage({ params }: { params: { slug: string } }) {
-  const exam = getExamBySlug(params.slug);
+export default function ExamDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
+  const exam = getExamBySlug(slug);
 
   if (!exam) {
     notFound();
