@@ -356,43 +356,61 @@ export default function CandidatesAdminPage() {
     );
   };
 
-  // Batch Email Sender (Respects Resend 100/day limit, e.g. 90/day)
-  const handleBatchSendConfirmation = async (batchLimit = 90) => {
+  // Batch Email Sender (Sends in safe chunks of 20 to prevent Cloudflare Worker 50-subrequest timeout)
+  const handleBatchSendConfirmation = async (targetTotal = 70) => {
     if (stats.emailUnsent === 0) {
       alert('All candidates have already received their confirmation emails! Zero pending.');
       return;
     }
 
-    const countToSend = Math.min(batchLimit, stats.emailUnsent);
+    const countToSend = Math.min(targetTotal, stats.emailUnsent);
     const confirmed = window.confirm(
       `Send confirmation emails to the next ${countToSend} unsent candidates?\n\n` +
       `• Sender: careers@rachakondasolutions.com\n` +
-      `• Free Resend quota: 100 emails/day\n` +
-      `• Batch size: ${countToSend}\n` +
-      `• Remaining for subsequent days: ${Math.max(0, stats.emailUnsent - countToSend)}\n` +
-      `• Duplicates protection: Previously emailed candidates are automatically skipped.`
+      `• Dispatched in safe Cloudflare chunks of 20\n` +
+      `• Target count: ${countToSend}\n` +
+      `• Remaining after this run: ${Math.max(0, stats.emailUnsent - countToSend)}\n` +
+      `• Duplicates protection: Enabled (already sent candidates are automatically skipped).`
     );
 
     if (!confirmed) return;
 
     setIsSendingBatch(true);
-    try {
-      const res = await fetch('/api/crm/candidates/batch-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ batchSize: countToSend }),
-      });
+    let totalDispatched = 0;
+    let remaining = countToSend;
 
-      const data = await res.json();
-      if (res.ok && data.success && data.sentInThisBatch > 0) {
-        showToast(`🎉 Success: ${data.sentInThisBatch} confirmation emails dispatched! (${data.remainingUnsent} remaining for subsequent batches)`);
-        fetchCandidates();
-      } else {
-        alert(`❌ Batch sending failed:\n\n${data.error || 'Failed to dispatch batch'}\n\nPlease verify that RESEND_API_KEY is added to Cloudflare Pages Settings -> Environment variables.`);
-        fetchCandidates();
+    try {
+      while (remaining > 0) {
+        const chunkSize = Math.min(remaining, 20);
+        showToast(`Sending batch... (${totalDispatched}/${countToSend} completed)`);
+
+        const res = await fetch('/api/crm/candidates/batch-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchSize: chunkSize }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success && data.sentInThisBatch > 0) {
+          totalDispatched += data.sentInThisBatch;
+          remaining -= data.sentInThisBatch;
+          if (data.sentInThisBatch < chunkSize) {
+            break;
+          }
+        } else {
+          alert(`Batch stopped: ${data.error || 'Failed to dispatch batch chunk'}`);
+          break;
+        }
+
+        // Brief delay between chunks
+        await new Promise((r) => setTimeout(r, 600));
       }
+
+      showToast(`🎉 Batch finished! Successfully dispatched ${totalDispatched} confirmation emails.`);
+      fetchCandidates();
     } catch (e: any) {
       alert(`Batch exception: ${e.message}`);
+      fetchCandidates();
     } finally {
       setIsSendingBatch(false);
     }
@@ -570,12 +588,12 @@ export default function CandidatesAdminPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => handleBatchSendConfirmation(90)}
+              onClick={() => handleBatchSendConfirmation(70)}
               disabled={isSendingBatch || stats.emailUnsent === 0}
               className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Sparkles className={`w-4 h-4 ${isSendingBatch ? 'animate-spin' : ''}`} />
-              <span>{isSendingBatch ? 'Sending Today\'s Batch...' : `Send Today's Batch (${Math.min(90, stats.emailUnsent)} Unsent)`}</span>
+              <span>{isSendingBatch ? 'Sending Today\'s Batch...' : `Send Today's Batch (${Math.min(70, stats.emailUnsent)} Unsent)`}</span>
             </button>
           </div>
         </div>

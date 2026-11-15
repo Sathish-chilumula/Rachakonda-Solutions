@@ -6,7 +6,8 @@ import { recordEmailLogTag, parseCandidateLead } from '@/lib/candidate-utils';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const batchSize = Math.min(Math.max(Number(body.batchSize) || 90, 1), 100);
+    // Cap at 20 per request to stay safely below Cloudflare Pages' hard 50-subrequest limit (20 Resend calls + 20 Supabase calls = 40 subrequests)
+    const batchSize = Math.min(Math.max(Number(body.batchSize) || 20, 1), 20);
 
     // 1. Fetch all candidate leads
     const { data: leads, error } = await supabaseAdmin
