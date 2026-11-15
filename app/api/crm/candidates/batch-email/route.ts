@@ -66,6 +66,20 @@ export async function POST(request: NextRequest) {
 
     const remainingUnsent = totalUnsent - sentCount;
 
+    if (sentCount === 0 && failedCount > 0) {
+      const firstError = errors[0]?.error || 'Failed to dispatch emails';
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Could not send emails: ${firstError}. Please ensure RESEND_API_KEY is configured in your hosting environment variables (Cloudflare Pages Settings -> Environment variables).`,
+          errors,
+          totalCandidates: parsed.length,
+          remainingUnsent: totalUnsent,
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       totalCandidates: parsed.length,

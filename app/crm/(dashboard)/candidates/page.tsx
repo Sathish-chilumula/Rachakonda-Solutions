@@ -384,11 +384,12 @@ export default function CandidatesAdminPage() {
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
-        showToast(`🎉 Success: ${data.sentInThisBatch} confirmation emails dispatched!`);
+      if (res.ok && data.success && data.sentInThisBatch > 0) {
+        showToast(`🎉 Success: ${data.sentInThisBatch} confirmation emails dispatched! (${data.remainingUnsent} remaining for subsequent batches)`);
         fetchCandidates();
       } else {
-        alert(`Batch sending error: ${data.error || 'Failed to dispatch batch'}`);
+        alert(`❌ Batch sending failed:\n\n${data.error || 'Failed to dispatch batch'}\n\nPlease verify that RESEND_API_KEY is added to Cloudflare Pages Settings -> Environment variables.`);
+        fetchCandidates();
       }
     } catch (e: any) {
       alert(`Batch exception: ${e.message}`);
