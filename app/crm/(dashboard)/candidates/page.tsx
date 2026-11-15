@@ -154,6 +154,24 @@ export default function CandidatesAdminPage() {
       else if (newStatus === 'new') label = `${candidateName} reset to New Application`;
 
       showToast(label);
+
+      // Offer to send lifecycle email on Interview / Rejection
+      const candidateObj = candidates.find((c) => c.id === candidateId);
+      if (candidateObj && candidateObj.email && candidateObj.email.includes('@')) {
+        if (newStatus === 'contacted') {
+          const ask = window.confirm(`Candidate status changed to Interview Scheduled.\n\nWould you like to dispatch an official Interview Call Letter to ${candidateName}?`);
+          if (ask) {
+            setEmailModalCandidate(candidateObj);
+            setEmailTypeToDispatch('interview');
+          }
+        } else if (newStatus === 'rejected') {
+          const ask = window.confirm(`Candidate marked as Rejected.\n\nWould you like to dispatch an update/rejection email to ${candidateName}?`);
+          if (ask) {
+            setEmailModalCandidate(candidateObj);
+            setEmailTypeToDispatch('rejected');
+          }
+        }
+      }
     } catch (err: any) {
       alert(`Error updating candidate: ${err?.message}`);
     }
@@ -533,6 +551,55 @@ export default function CandidatesAdminPage() {
         </div>
       </div>
 
+      {/* ─── Email Dispatch & Quota Manager ──────────────────────────────── */}
+      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-7 shadow-lg border border-blue-500/20">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 rounded-full border border-blue-400/30 text-blue-300 text-xs font-bold">
+              <Mail className="w-3.5 h-3.5" />
+              <span>Resend Official Gateway &bull; careers@rachakondasolutions.com</span>
+            </div>
+            <h3 className="text-xl font-black text-white font-display">
+              Candidate Confirmation &amp; Interview Email Automation
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
+              Track candidate emails in real-time. Resend free tier permits <strong>100 emails/day</strong>. You can safely dispatch today&apos;s batch of up to 90 emails with automatic duplicate protection.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => handleBatchSendConfirmation(90)}
+              disabled={isSendingBatch || stats.emailUnsent === 0}
+              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles className={`w-4 h-4 ${isSendingBatch ? 'animate-spin' : ''}`} />
+              <span>{isSendingBatch ? 'Sending Today\'s Batch...' : `Send Today's Batch (${Math.min(90, stats.emailUnsent)} Unsent)`}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Mini Email Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-white/10">
+          <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Candidates</span>
+            <span className="text-xl font-black text-white">{stats.total}</span>
+          </div>
+          <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20">
+            <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">✓ Confirmation Sent</span>
+            <span className="text-xl font-black text-emerald-300">{stats.emailSent}</span>
+          </div>
+          <div className="bg-amber-500/10 rounded-xl p-3 border border-amber-500/20">
+            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider block">⏳ Unsent / Pending</span>
+            <span className="text-xl font-black text-amber-300">{stats.emailUnsent}</span>
+          </div>
+          <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/20">
+            <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider block">Daily Free Quota</span>
+            <span className="text-xl font-black text-blue-300">100 / Day</span>
+          </div>
+        </div>
+      </div>
+
       {/* ─── Search, Filters & Bulk Actions ─────────────────────────────── */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-xs border border-slate-200/80 space-y-4">
         {/* Status Filter Tabs */}
@@ -563,16 +630,16 @@ export default function CandidatesAdminPage() {
           ))}
         </div>
 
-        {/* Search & Role Filter Bar */}
+        {/* Search, Role & Email Filter Bar */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2">
           {/* Search Box */}
-          <div className="md:col-span-7 relative">
+          <div className="md:col-span-6 relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by candidate name, phone, father's name, ref ID, address, or role..."
+              placeholder="Search by candidate name, phone, ref ID, role..."
               className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
             {search && (
@@ -586,18 +653,31 @@ export default function CandidatesAdminPage() {
           </div>
 
           {/* Role Filter */}
-          <div className="md:col-span-5">
+          <div className="md:col-span-3">
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full py-2.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             >
-              <option value="all">Filter by Applied Position (All 11 Roles)</option>
+              <option value="all">All Positions (11 Roles)</option>
               {JOB_ROLES.map((role) => (
                 <option key={role.id} value={role.title}>
                   #{role.no} - {role.title}
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Email Status Filter */}
+          <div className="md:col-span-3">
+            <select
+              value={emailFilter}
+              onChange={(e) => setEmailFilter(e.target.value as any)}
+              className="w-full py-2.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            >
+              <option value="all">Email: All ({stats.total})</option>
+              <option value="unsent">⏳ Unsent / Pending ({stats.emailUnsent})</option>
+              <option value="sent">✓ Confirmation Sent ({stats.emailSent})</option>
             </select>
           </div>
         </div>
@@ -672,6 +752,10 @@ export default function CandidatesAdminPage() {
               handleUpdateStatus(id, c?.name || 'Candidate', status);
             }}
             onDeleteRequest={(c) => setCandidateToDelete(c)}
+            onSendEmailRequest={(c) => {
+              setEmailModalCandidate(c);
+              setEmailTypeToDispatch(c.status === 'contacted' ? 'interview' : c.status === 'rejected' ? 'rejected' : 'confirmation');
+            }}
           />
         )}
 
@@ -1063,6 +1147,149 @@ export default function CandidatesAdminPage() {
                   className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-md disabled:opacity-50"
                 >
                   {isDeleting ? 'Deleting...' : `Yes, Delete All ${selectedIds.length}`}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Email Dispatcher Modal ─── */}
+      <AnimatePresence>
+        {emailModalCandidate && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => !isDispatchingSingleEmail && setEmailModalCandidate(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-7 border border-slate-200 z-10 space-y-4"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-200 text-[11px] font-bold mb-2">
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>From: careers@rachakondasolutions.com</span>
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900">
+                    Dispatch Email to Candidate
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    To: <strong>{emailModalCandidate.name}</strong> ({emailModalCandidate.email})
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEmailModalCandidate(null)}
+                  className="p-1 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Template Type Selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Select Email Template:
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    {
+                      type: 'confirmation',
+                      label: '1. Application Confirmation Receipt',
+                      desc: 'Sends Ref ID, summary of roles, and hiring roadmap.',
+                    },
+                    {
+                      type: 'interview',
+                      label: '2. Official Interview Call Letter',
+                      desc: 'Invites candidate to Gajwel Campus with schedule & document list.',
+                    },
+                    {
+                      type: 'rejected',
+                      label: '3. Polite Status Update / Rejection',
+                      desc: 'Courteous message keeping candidate in talent pool.',
+                    },
+                  ].map((tmpl) => (
+                    <label
+                      key={tmpl.type}
+                      className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                        emailTypeToDispatch === tmpl.type
+                          ? 'border-blue-500 bg-blue-50/50 shadow-xs'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="emailType"
+                        value={tmpl.type}
+                        checked={emailTypeToDispatch === tmpl.type}
+                        onChange={() => setEmailTypeToDispatch(tmpl.type as any)}
+                        className="mt-1 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">{tmpl.label}</div>
+                        <div className="text-[11px] text-slate-500 leading-relaxed">{tmpl.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extra Inputs for Interview Call Letter */}
+              {emailTypeToDispatch === 'interview' && (
+                <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 space-y-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-amber-900 block mb-1">
+                      Interview Date &amp; Reporting Time:
+                    </label>
+                    <input
+                      type="text"
+                      value={interviewDateInput}
+                      onChange={(e) => setInterviewDateInput(e.target.value)}
+                      placeholder="e.g. 18th Nov 2026 at 10:30 AM"
+                      className="w-full text-xs font-semibold px-3 py-2 bg-white border border-amber-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-amber-900 block mb-1">
+                      Special Instructions (Optional):
+                    </label>
+                    <input
+                      type="text"
+                      value={customNotesInput}
+                      onChange={(e) => setCustomNotesInput(e.target.value)}
+                      placeholder="e.g. Report to 2nd Floor HR Desk, Ask for Mr. Ramesh"
+                      className="w-full text-xs font-semibold px-3 py-2 bg-white border border-amber-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isDispatchingSingleEmail}
+                  onClick={() => setEmailModalCandidate(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDispatchingSingleEmail}
+                  onClick={handleDispatchSingleEmail}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>{isDispatchingSingleEmail ? 'Dispatching...' : 'Send Official Email'}</span>
                 </button>
               </div>
             </motion.div>
