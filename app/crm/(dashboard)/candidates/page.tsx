@@ -165,10 +165,27 @@ export default function CandidatesAdminPage() {
             setEmailTypeToDispatch('interview');
           }
         } else if (newStatus === 'rejected') {
-          const ask = window.confirm(`Candidate marked as Rejected.\n\nWould you like to dispatch an update/rejection email to ${candidateName}?`);
+          const ask = window.confirm(`Candidate marked as Rejected.\n\nWould you like to send a polite status update/rejection email to ${candidateName} (${candidateObj.email}) right now?`);
           if (ask) {
-            setEmailModalCandidate(candidateObj);
-            setEmailTypeToDispatch('rejected');
+            showToast(`Sending rejection email to ${candidateName}...`);
+            fetch('/api/crm/candidates/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                candidateId: candidateObj.id,
+                emailType: 'rejected',
+              }),
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.success) {
+                  showToast(`✉️ Rejection email delivered to ${candidateName}!`);
+                  fetchCandidates();
+                } else {
+                  alert(`Failed to send rejection email: ${data.error}`);
+                }
+              })
+              .catch((err) => alert(`Error sending rejection email: ${err.message}`));
           }
         }
       }
