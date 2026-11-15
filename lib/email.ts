@@ -29,6 +29,93 @@ export function getSenderForSource(source?: string): string {
   return CONTACT_FROM_EMAIL;
 }
 
+/**
+ * Unified Multi-Provider Email Dispatcher:
+ * 1. Primary: Resend (100 free emails/day)
+ * 2. Automatic Fallback: Brevo (Sendinblue - 300 free emails/day)
+ *
+ * This allows expanding the free daily sending quota from 100 to 400 emails/day
+ * with zero duplicates because all status tracking is centralized in Supabase.
+ */
+export async function sendEmailViaAvailableProvider({
+  from,
+  to,
+  subject,
+  html,
+}: {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string; provider?: 'resend' | 'brevo' }> {
+  // 1. Try Resend if key is available
+  const resend = getResendClient();
+  let resendErrorMessage: string | null = null;
+  if (resend) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from,
+        to: [to.trim()],
+        subject,
+        html,
+      });
+
+      if (!error && data?.id) {
+        console.log(`[Resend] Successfully delivered to ${to} (Message ID: ${data.id})`);
+        return { success: true, messageId: data.id, provider: 'resend' };
+      }
+
+      resendErrorMessage = error?.message || 'Resend delivery failed';
+      console.warn(`[Resend] Delivery issue (${resendErrorMessage}). Checking Brevo fallback...`);
+    } catch (err: any) {
+      resendErrorMessage = err?.message || 'Resend exception';
+      console.warn(`[Resend] Exception (${resendErrorMessage}). Checking Brevo fallback...`);
+    }
+  }
+
+  // 2. Try Brevo (Sendinblue) if BREVO_API_KEY is configured
+  const brevoKey = process.env.BREVO_API_KEY;
+  if (brevoKey) {
+    try {
+      const senderMatch = from.match(/^(.*?)\s*<(.+?)>$/);
+      const senderName = senderMatch ? senderMatch[1].trim() : 'Rachakonda Solutions';
+      const senderEmail = senderMatch ? senderMatch[2].trim() : from;
+
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': brevoKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email: to.trim() }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data?.messageId) {
+        console.log(`[Brevo] Successfully delivered to ${to} (Message ID: ${data.messageId})`);
+        return { success: true, messageId: data.messageId, provider: 'brevo' };
+      }
+
+      console.error('[Brevo] Dispatch failed:', data);
+      return { success: false, error: data?.message || 'Brevo dispatch failed', provider: 'brevo' };
+    } catch (err: any) {
+      console.error('[Brevo] Exception:', err);
+      return { success: false, error: err?.message || 'Brevo error', provider: 'brevo' };
+    }
+  }
+
+  return {
+    success: false,
+    error: resendErrorMessage || 'No email service available. Please configure RESEND_API_KEY or BREVO_API_KEY.',
+  };
+}
+
 export interface CareerConfirmationParams {
   to: string;
   name: string;
@@ -65,10 +152,9 @@ export async function sendCareerApplicationConfirmationEmail({
   experience = 'Fresher',
   city = 'Telangana',
 }: CareerConfirmationParams) {
-  const resend = getResendClient();
-  if (!resend) {
-    console.warn('[Resend] Skipping candidate confirmation email: RESEND_API_KEY is not configured in .env.local.');
-    return { success: false, reason: 'RESEND_API_KEY missing' };
+  if (!process.env.RESEND_API_KEY && !process.env.BREVO_API_KEY) {
+    console.warn('[Email Engine] Skipping email: RESEND_API_KEY and BREVO_API_KEY are not configured.');
+    return { success: false, reason: 'Email API key missing' };
   }
 
   if (!to || !to.includes('@')) {
@@ -256,22 +342,20 @@ export async function sendCareerApplicationConfirmationEmail({
     `;
 
     const sender = process.env.RESEND_FROM_EMAIL || DEFAULT_FROM_EMAIL;
-    const { data, error } = await resend.emails.send({
+    const sendRes = await sendEmailViaAvailableProvider({
       from: sender,
-      to: [to.trim()],
+      to: to.trim(),
       subject: `Application Confirmed: ${roles} (Ref: ${referenceId}) - Rachakonda Solutions`,
       html: htmlContent,
     });
 
-    if (error) {
-      console.error('[Resend] Error sending candidate confirmation email:', error);
-      return { success: false, error: error.message };
+    if (!sendRes.success) {
+      return { success: false, error: sendRes.error };
     }
 
-    console.log(`[Resend] Successfully sent confirmation email to ${to} (Message ID: ${data?.id})`);
-    return { success: true, messageId: data?.id };
+    return { success: true, messageId: sendRes.messageId };
   } catch (err: any) {
-    console.error('[Resend] Unexpected exception during candidate email dispatch:', err);
+    console.error('[Email Engine] Unexpected exception during candidate email dispatch:', err);
     return { success: false, error: err?.message || 'Email delivery failed' };
   }
 }
@@ -290,9 +374,8 @@ export async function sendCareerAdminNotificationEmail({
   city = 'Telangana',
   additionalNotes,
 }: CareerAdminAlertParams) {
-  const resend = getResendClient();
-  if (!resend) {
-    return { success: false, reason: 'RESEND_API_KEY missing' };
+  if (!process.env.RESEND_API_KEY && !process.env.BREVO_API_KEY) {
+    return { success: false, reason: 'Email API key missing' };
   }
 
   try {
@@ -358,21 +441,20 @@ export async function sendCareerAdminNotificationEmail({
     `;
 
     const sender = process.env.RESEND_FROM_EMAIL || DEFAULT_FROM_EMAIL;
-    const { data, error } = await resend.emails.send({
+    const sendRes = await sendEmailViaAvailableProvider({
       from: sender,
-      to: [ADMIN_NOTIFICATION_EMAIL],
+      to: ADMIN_NOTIFICATION_EMAIL,
       subject: `[New Candidate] ${candidateName} applied for ${roles} (${referenceId})`,
       html: adminHtml,
     });
 
-    if (error) {
-      console.error('[Resend] Error sending admin notification email:', error);
-      return { success: false, error: error.message };
+    if (!sendRes.success) {
+      return { success: false, error: sendRes.error };
     }
 
-    return { success: true, messageId: data?.id };
+    return { success: true, messageId: sendRes.messageId };
   } catch (err: any) {
-    console.error('[Resend] Admin notification dispatch failed:', err);
+    console.error('[Email Engine] Admin notification dispatch failed:', err);
     return { success: false, error: err?.message };
   }
 }
@@ -395,8 +477,9 @@ export async function sendInterviewInvitationEmail({
   interviewDate?: string;
   customNotes?: string;
 }) {
-  const resend = getResendClient();
-  if (!resend) return { success: false, reason: 'RESEND_API_KEY missing' };
+  if (!process.env.RESEND_API_KEY && !process.env.BREVO_API_KEY) {
+    return { success: false, reason: 'Email API key missing' };
+  }
   if (!to || !to.includes('@')) return { success: false, reason: 'Invalid email' };
 
   try {
@@ -504,19 +587,18 @@ export async function sendInterviewInvitationEmail({
 </html>
     `;
 
-    const { data, error } = await resend.emails.send({
+    const sendRes = await sendEmailViaAvailableProvider({
       from: CAREERS_FROM_EMAIL,
-      to: [to.trim()],
+      to: to.trim(),
       subject: `Interview Call Letter: ${roles} (Ref: ${referenceId}) - Rachakonda Solutions`,
       html: htmlContent,
     });
 
-    if (error) {
-      console.error('[Resend] Error sending interview invitation:', error);
-      return { success: false, error: error.message };
+    if (!sendRes.success) {
+      return { success: false, error: sendRes.error };
     }
 
-    return { success: true, messageId: data?.id };
+    return { success: true, messageId: sendRes.messageId };
   } catch (err: any) {
     return { success: false, error: err?.message };
   }
@@ -536,8 +618,9 @@ export async function sendCandidateRejectionEmail({
   referenceId: string;
   roles: string;
 }) {
-  const resend = getResendClient();
-  if (!resend) return { success: false, reason: 'RESEND_API_KEY missing' };
+  if (!process.env.RESEND_API_KEY && !process.env.BREVO_API_KEY) {
+    return { success: false, reason: 'Email API key missing' };
+  }
   if (!to || !to.includes('@')) return { success: false, reason: 'Invalid email' };
 
   try {
@@ -590,15 +673,15 @@ export async function sendCandidateRejectionEmail({
 </html>
     `;
 
-    const { data, error } = await resend.emails.send({
+    const sendRes = await sendEmailViaAvailableProvider({
       from: CAREERS_FROM_EMAIL,
-      to: [to.trim()],
+      to: to.trim(),
       subject: `Update regarding your application for ${roles} (Ref: ${referenceId}) - Rachakonda Solutions`,
       html: htmlContent,
     });
 
-    if (error) return { success: false, error: error.message };
-    return { success: true, messageId: data?.id };
+    if (!sendRes.success) return { success: false, error: sendRes.error };
+    return { success: true, messageId: sendRes.messageId };
   } catch (err: any) {
     return { success: false, error: err?.message };
   }
@@ -618,8 +701,9 @@ export async function sendCounselingInquiryEmail({
   course: string;
   category?: string;
 }) {
-  const resend = getResendClient();
-  if (!resend) return { success: false, reason: 'RESEND_API_KEY missing' };
+  if (!process.env.RESEND_API_KEY && !process.env.BREVO_API_KEY) {
+    return { success: false, reason: 'Email API key missing' };
+  }
   if (!to || !to.includes('@')) return { success: false, reason: 'Invalid email' };
 
   try {
@@ -651,15 +735,15 @@ export async function sendCounselingInquiryEmail({
 </html>
     `;
 
-    const { data, error } = await resend.emails.send({
+    const sendRes = await sendEmailViaAvailableProvider({
       from: ADMISSIONS_FROM_EMAIL,
-      to: [to.trim()],
+      to: to.trim(),
       subject: `Admissions & Counseling Inquiry: ${course} - Rachakonda Solutions`,
       html: htmlContent,
     });
 
-    if (error) return { success: false, error: error.message };
-    return { success: true, messageId: data?.id };
+    if (!sendRes.success) return { success: false, error: sendRes.error };
+    return { success: true, messageId: sendRes.messageId };
   } catch (err: any) {
     return { success: false, error: err?.message };
   }

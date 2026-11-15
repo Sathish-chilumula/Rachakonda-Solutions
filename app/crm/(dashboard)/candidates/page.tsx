@@ -203,11 +203,30 @@ export default function CandidatesAdminPage() {
       if (candidateObj && candidateObj.email && candidateObj.email.includes('@')) {
         if (newStatus === 'contacted') {
           const ask = window.confirm(
-            `Candidate status changed to Interview Scheduled.\n\nWould you like to dispatch an official Interview Call Letter to ${candidateName}?`
+            `Candidate status changed to Interview Scheduled.\n\nWould you like to dispatch an official Interview Call Letter to ${candidateName} (${candidateObj.email}) right now?`
           );
           if (ask) {
-            setEmailModalCandidate(candidateObj);
-            setEmailTypeToDispatch('interview');
+            showToast(`Sending Interview Call Letter to ${candidateName}...`);
+            fetch('/api/crm/candidates/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                candidateId: candidateObj.id,
+                emailType: 'interview',
+                interviewDate: 'Within 3 Business Days (10:00 AM - 4:00 PM)',
+                customNotes: 'Report to Gajwel Campus 2nd Floor HR Desk',
+              }),
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.success) {
+                  showToast(`✉️ Interview Call Letter delivered to ${candidateName}!`);
+                  fetchCandidates();
+                } else {
+                  alert(`Failed to send interview email: ${data.error}`);
+                }
+              })
+              .catch((err) => alert(`Error sending interview email: ${err.message}`));
           }
         } else if (newStatus === 'rejected') {
           const ask = window.confirm(
