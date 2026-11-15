@@ -152,7 +152,9 @@ export default function CandidatesTable({
                 >
                   <option value="new">New Application 🔵</option>
                   <option value="contacted">Interview Scheduled 🟡</option>
-                  <option value="converted">Selected / Hired 🟢</option>
+                  <option value="converted" disabled={c.status === 'new'}>
+                    Selected / Hired 🟢 {c.status === 'new' ? '(Interview Required First)' : ''}
+                  </option>
                   <option value="rejected">Rejected 🔴</option>
                 </select>
               </div>
@@ -353,7 +355,9 @@ export default function CandidatesTable({
                       >
                         <option value="new">New Application 🔵</option>
                         <option value="contacted">Interview Scheduled 🟡</option>
-                        <option value="converted">Selected / Hired 🟢</option>
+                        <option value="converted" disabled={c.status === 'new'}>
+                          Selected / Hired 🟢 {c.status === 'new' ? '(Interview Required First)' : ''}
+                        </option>
                         <option value="rejected">Rejected 🔴</option>
                       </select>
                     </td>

@@ -5,7 +5,7 @@ import {
   sendInterviewInvitationEmail,
   sendCandidateRejectionEmail,
 } from '@/lib/email';
-import { recordEmailLogTag, parseCandidateLead } from '@/lib/candidate-utils';
+import { recordEmailLogTag, recordInterviewScheduledTag, parseCandidateLead } from '@/lib/candidate-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,10 +72,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Record the email log tag in internal_notes so CRM reflects it immediately
-    const updatedNotes = recordEmailLogTag(lead.internal_notes, emailType);
+    let updatedNotes = recordEmailLogTag(lead.internal_notes, emailType);
+    const updatePayload: Record<string, any> = {
+      internal_notes: updatedNotes,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (emailType === 'interview') {
+      updatedNotes = recordInterviewScheduledTag(updatedNotes);
+      updatePayload.internal_notes = updatedNotes;
+      updatePayload.status = 'contacted';
+    } else if (emailType === 'rejected') {
+      updatePayload.status = 'rejected';
+    }
+
     await supabaseAdmin
       .from('leads')
-      .update({ internal_notes: updatedNotes, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq('id', candidateId);
 
     return NextResponse.json({

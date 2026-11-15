@@ -17,10 +17,12 @@ export interface CandidateItem {
   priority: string;
   internalNotes: string;
   createdAt: string;
+  updatedAt?: string;
   rawRemarks: string;
   emailStatus: 'sent' | 'unsent';
   emailSentAt: string | null;
   lastEmailType: 'confirmation' | 'interview' | 'rejected' | null;
+  interviewScheduledAt?: string | null;
 }
 
 /**
@@ -34,6 +36,86 @@ export function recordEmailLogTag(
   const tag = `[EMAIL: ${type} | ${now}]`;
   const clean = (existingNotes || '').replace(/\[EMAIL:\s*[^\]]+\]/gi, '').trim();
   return clean ? `${tag}\n${clean}` : tag;
+}
+
+/**
+ * Records an interview scheduled audit tag to internal_notes.
+ */
+export function recordInterviewScheduledTag(
+  existingNotes: string | null | undefined,
+  dateStr?: string
+): string {
+  const now = dateStr || new Date().toISOString();
+  const tag = `[INTERVIEW_SCHEDULED: ${now}]`;
+  const clean = (existingNotes || '').replace(/\[INTERVIEW_SCHEDULED:\s*[^\]]+\]/gi, '').trim();
+  return clean ? `${tag}\n${clean}` : tag;
+}
+
+/**
+ * Enforces enterprise recruitment protocol rules:
+ * 1. Candidate must be in 'contacted' (Interview Scheduled) state. Direct hire from 'new' is blocked.
+ * 2. Mandates at least a 24-hour evaluation cooling period between interview scheduling and selection.
+ */
+export function checkCandidateSelectionEligibility(candidate: CandidateItem): {
+  eligible: boolean;
+  statusBlocked?: boolean;
+  coolingPeriodActive?: boolean;
+  hoursRemaining?: number;
+  scheduledAt?: string;
+  reason: string;
+} {
+  if (candidate.status === 'new') {
+    return {
+      eligible: false,
+      statusBlocked: true,
+      reason:
+        'Candidates cannot be selected directly from "New Application". Official HR protocol requires the candidate to be shortlisted and scheduled for an interview first.',
+    };
+  }
+
+  if (candidate.status === 'rejected') {
+    return {
+      eligible: false,
+      statusBlocked: true,
+      reason:
+        'Candidate is currently marked as "Rejected". If you wish to reconsider them, schedule an interview first.',
+    };
+  }
+
+  if (candidate.status === 'converted') {
+    return {
+      eligible: false,
+      statusBlocked: true,
+      reason: 'Candidate is already marked as Selected / Hired.',
+    };
+  }
+
+  // If candidate is in contacted (Interview Scheduled)
+  const scheduledTimeStr = candidate.interviewScheduledAt;
+  if (scheduledTimeStr) {
+    const scheduledTime = new Date(scheduledTimeStr).getTime();
+    if (!isNaN(scheduledTime)) {
+      const now = Date.now();
+      const elapsedHours = (now - scheduledTime) / (1000 * 60 * 60);
+      if (elapsedHours < 24) {
+        const hoursRemaining = Math.max(1, Math.ceil(24 - elapsedHours));
+        return {
+          eligible: false,
+          coolingPeriodActive: true,
+          hoursRemaining,
+          scheduledAt: scheduledTimeStr,
+          reason: `Interview was scheduled on ${new Date(scheduledTimeStr).toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+          })}. HR protocol mandates at least a 24-hour evaluation and interview assessment window before an official selection can be confirmed (${hoursRemaining} hour(s) remaining in cooling window).`,
+        };
+      }
+    }
+  }
+
+  return {
+    eligible: true,
+    reason: 'Candidate has satisfied all recruitment workflow stage requirements.',
+  };
 }
 
 export function parseCandidateLead(lead: any): CandidateItem {
@@ -89,6 +171,17 @@ export function parseCandidateLead(lead: any): CandidateItem {
     emailSentAt = emailMatch[2].trim();
   }
 
+  // Interview Scheduled timestamp parsing
+  const interviewMatch = internalNotes.match(/\[INTERVIEW_SCHEDULED:\s*([^\]]+)\]/i);
+  let interviewScheduledAt: string | null = null;
+  if (interviewMatch) {
+    interviewScheduledAt = interviewMatch[1].trim();
+  } else if (lastEmailType === 'interview' && emailSentAt) {
+    interviewScheduledAt = emailSentAt;
+  } else if (lead.status === 'contacted' && lead.updated_at) {
+    interviewScheduledAt = lead.updated_at;
+  }
+
   return {
     id: lead.id,
     refId,
@@ -108,10 +201,12 @@ export function parseCandidateLead(lead: any): CandidateItem {
     priority: lead.priority || 'hot',
     internalNotes: internalNotes,
     createdAt: lead.created_at || new Date().toISOString(),
+    updatedAt: lead.updated_at || undefined,
     rawRemarks: remarks,
     emailStatus,
     emailSentAt,
     lastEmailType,
+    interviewScheduledAt,
   };
 }
 

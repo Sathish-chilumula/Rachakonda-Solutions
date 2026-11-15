@@ -34,7 +34,13 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { JOB_ROLES } from '@/lib/data/careers';
-import { CandidateItem, parseCandidateLead, exportCandidatesToCSV } from '@/lib/candidate-utils';
+import {
+  CandidateItem,
+  parseCandidateLead,
+  exportCandidatesToCSV,
+  checkCandidateSelectionEligibility,
+  recordInterviewScheduledTag,
+} from '@/lib/candidate-utils';
 import CandidatesTable from '@/components/crm/CandidatesTable';
 import Link from 'next/link';
 import { useCRM } from '../context';
@@ -65,6 +71,13 @@ export default function CandidatesAdminPage() {
   const [interviewDateInput, setInterviewDateInput] = useState<string>('Within 3 Business Days (10:00 AM - 4:00 PM)');
   const [customNotesInput, setCustomNotesInput] = useState<string>('');
   const [isDispatchingSingleEmail, setIsDispatchingSingleEmail] = useState<boolean>(false);
+
+  // ─── Two-Step Candidate Selection Verification Protocol ─────────
+  const [candidateForSelection, setCandidateForSelection] = useState<CandidateItem | null>(null);
+  const [selectionStep, setSelectionStep] = useState<1 | 2>(1);
+  const [coolingWarning, setCoolingWarning] = useState<string | null>(null);
+  const [selectionAgreed, setSelectionAgreed] = useState<boolean>(false);
+  const [isConfirmingSelection, setIsConfirmingSelection] = useState<boolean>(false);
 
   const showToast = (msg: string) => {
     setActionSuccessMessage(msg);
@@ -104,7 +117,7 @@ export default function CandidatesAdminPage() {
   };
 
   // Status updates:
-  // converted -> Selected / Hired
+  // converted -> Selected / Hired (requires 2-step verification & interview pre-requisite)
   // rejected -> Rejected
   // contacted -> Interview Scheduled
   // new -> New / Reset
@@ -114,10 +127,36 @@ export default function CandidatesAdminPage() {
     newStatus: 'converted' | 'rejected' | 'contacted' | 'new'
   ) => {
     try {
+      const candidateObj = candidates.find((c) => c.id === candidateId);
+      if (!candidateObj) return;
+
+      // ─── STAGE-GATE ENFORCEMENT & 2-STEP SELECTION PROTOCOL ─────────────
+      if (newStatus === 'converted') {
+        const eligibility = checkCandidateSelectionEligibility(candidateObj);
+        if (eligibility.statusBlocked) {
+          alert(`⛔ HR Protocol Blocked:\n\n${eligibility.reason}`);
+          return;
+        }
+
+        // Open the Two-Step Verification Dialog
+        setCandidateForSelection(candidateObj);
+        setSelectionStep(1);
+        setSelectionAgreed(false);
+        setCoolingWarning(eligibility.coolingPeriodActive ? eligibility.reason : null);
+        return;
+      }
+
+      // If moving to Interview Scheduled, stamp audit timestamp in internal_notes
+      let updatedNotes = candidateObj.internalNotes;
+      if (newStatus === 'contacted') {
+        updatedNotes = recordInterviewScheduledTag(updatedNotes);
+      }
+
       const { error } = await supabase
         .from('leads')
         .update({
           status: newStatus,
+          internal_notes: updatedNotes,
           updated_at: new Date().toISOString(),
         })
         .eq('id', candidateId);
@@ -132,10 +171,16 @@ export default function CandidatesAdminPage() {
         prev.map((c) => {
           if (c.id === candidateId) {
             let statusLabel = 'New Application';
-            if (newStatus === 'converted') statusLabel = 'Selected / Hired';
-            else if (newStatus === 'rejected') statusLabel = 'Rejected';
+            if (newStatus === 'rejected') statusLabel = 'Rejected';
             else if (newStatus === 'contacted') statusLabel = 'Interview Scheduled';
-            return { ...c, status: newStatus, statusLabel };
+            return {
+              ...c,
+              status: newStatus,
+              statusLabel,
+              internalNotes: updatedNotes,
+              interviewScheduledAt:
+                newStatus === 'contacted' ? new Date().toISOString() : c.interviewScheduledAt,
+            };
           }
           return c;
         })
@@ -143,29 +188,31 @@ export default function CandidatesAdminPage() {
 
       if (activeModalCandidate && activeModalCandidate.id === candidateId) {
         setActiveModalCandidate((prev) =>
-          prev ? { ...prev, status: newStatus } : null
+          prev ? { ...prev, status: newStatus, internalNotes: updatedNotes } : null
         );
       }
 
       let label = 'Status updated';
-      if (newStatus === 'converted') label = `🎉 ${candidateName} marked as SELECTED / HIRED!`;
-      else if (newStatus === 'rejected') label = `${candidateName} marked as REJECTED`;
+      if (newStatus === 'rejected') label = `${candidateName} marked as REJECTED`;
       else if (newStatus === 'contacted') label = `📅 Interview Scheduled for ${candidateName}`;
       else if (newStatus === 'new') label = `${candidateName} reset to New Application`;
 
       showToast(label);
 
       // Offer to send lifecycle email on Interview / Rejection
-      const candidateObj = candidates.find((c) => c.id === candidateId);
       if (candidateObj && candidateObj.email && candidateObj.email.includes('@')) {
         if (newStatus === 'contacted') {
-          const ask = window.confirm(`Candidate status changed to Interview Scheduled.\n\nWould you like to dispatch an official Interview Call Letter to ${candidateName}?`);
+          const ask = window.confirm(
+            `Candidate status changed to Interview Scheduled.\n\nWould you like to dispatch an official Interview Call Letter to ${candidateName}?`
+          );
           if (ask) {
             setEmailModalCandidate(candidateObj);
             setEmailTypeToDispatch('interview');
           }
         } else if (newStatus === 'rejected') {
-          const ask = window.confirm(`Candidate marked as Rejected.\n\nWould you like to send a polite status update/rejection email to ${candidateName} (${candidateObj.email}) right now?`);
+          const ask = window.confirm(
+            `Candidate marked as Rejected.\n\nWould you like to send a polite status update/rejection email to ${candidateName} (${candidateObj.email}) right now?`
+          );
           if (ask) {
             showToast(`Sending rejection email to ${candidateName}...`);
             fetch('/api/crm/candidates/send-email', {
@@ -191,6 +238,59 @@ export default function CandidatesAdminPage() {
       }
     } catch (err: any) {
       alert(`Error updating candidate: ${err?.message}`);
+    }
+  };
+
+  // ─── Two-Step Final Selection Finalizer ───────────────────────────────────
+  const handleFinalizeSelection = async () => {
+    if (!candidateForSelection || !selectionAgreed) return;
+    setIsConfirmingSelection(true);
+    try {
+      const candidateId = candidateForSelection.id;
+      const candidateName = candidateForSelection.name;
+      const nowIso = new Date().toISOString();
+      const tag = `[STATUS: converted | ${nowIso}]`;
+      const updatedNotes = candidateForSelection.internalNotes
+        ? `${tag}\n${candidateForSelection.internalNotes}`
+        : tag;
+
+      const { error } = await supabase
+        .from('leads')
+        .update({
+          status: 'converted',
+          internal_notes: updatedNotes,
+          updated_at: nowIso,
+        })
+        .eq('id', candidateId);
+
+      if (error) {
+        alert(`Failed to confirm selection: ${error.message}`);
+        return;
+      }
+
+      setCandidates((prev) =>
+        prev.map((c) =>
+          c.id === candidateId
+            ? { ...c, status: 'converted', statusLabel: 'Selected / Hired', internalNotes: updatedNotes }
+            : c
+        )
+      );
+
+      if (activeModalCandidate && activeModalCandidate.id === candidateId) {
+        setActiveModalCandidate((prev) =>
+          prev ? { ...prev, status: 'converted', statusLabel: 'Selected / Hired', internalNotes: updatedNotes } : null
+        );
+      }
+
+      showToast(`🎉 ${candidateName} officially verified and marked as SELECTED / HIRED!`);
+      setCandidateForSelection(null);
+      setSelectionStep(1);
+      setSelectionAgreed(false);
+      setCoolingWarning(null);
+    } catch (e: any) {
+      alert(`Selection confirmation error: ${e.message}`);
+    } finally {
+      setIsConfirmingSelection(false);
     }
   };
 
@@ -278,11 +378,11 @@ export default function CandidatesAdminPage() {
     }
   };
 
-  // Bulk Status Update
-  const handleBulkUpdate = async (status: 'converted' | 'rejected' | 'contacted') => {
+  // Bulk Status Update (Bulk selection is strictly disabled per HR governance protocol)
+  const handleBulkUpdate = async (status: 'rejected' | 'contacted') => {
     if (selectedIds.length === 0) return;
     const confirmMsg = `Are you sure you want to mark ${selectedIds.length} candidate(s) as ${
-      status === 'converted' ? 'SELECTED' : status === 'rejected' ? 'REJECTED' : 'INTERVIEW SCHEDULED'
+      status === 'rejected' ? 'REJECTED' : 'INTERVIEW SCHEDULED'
     }?`;
     if (!window.confirm(confirmMsg)) return;
 
@@ -735,32 +835,26 @@ export default function CandidatesAdminPage() {
 
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => handleBulkUpdate('converted')}
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" /> Mark All as Selected 🟢
-              </button>
-              <button
                 onClick={() => handleBulkUpdate('contacted')}
-                className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs"
+                className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Clock className="w-3.5 h-3.5" /> Schedule Interviews 🟡
               </button>
               <button
                 onClick={() => handleBulkUpdate('rejected')}
-                className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs"
+                className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <XCircle className="w-3.5 h-3.5" /> Mark as Rejected 🔴
               </button>
               <button
                 onClick={handleExportFiltered}
-                className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs"
+                className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <FileDown className="w-3.5 h-3.5" /> Export Selected CSV
               </button>
               <button
                 onClick={() => setIsBulkDeleting(true)}
-                className="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs"
+                className="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" /> Delete Selected ({selectedIds.length})
               </button>
@@ -875,30 +969,59 @@ export default function CandidatesAdminPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() =>
-                      handleUpdateStatus(
-                        activeModalCandidate.id,
-                        activeModalCandidate.name,
-                        'converted'
-                      )
-                    }
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1 shadow-xs"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Mark Selected 🟢
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleUpdateStatus(
-                        activeModalCandidate.id,
-                        activeModalCandidate.name,
-                        'rejected'
-                      )
-                    }
-                    className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black flex items-center gap-1 shadow-xs"
-                  >
-                    <XCircle className="w-3.5 h-3.5" /> Mark Rejected 🔴
-                  </button>
+                  {/* Stage-Gate Action Buttons */}
+                  {activeModalCandidate.status === 'new' && (
+                    <button
+                      onClick={() =>
+                        handleUpdateStatus(
+                          activeModalCandidate.id,
+                          activeModalCandidate.name,
+                          'contacted'
+                        )
+                      }
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      title="Shortlist and schedule for interview"
+                    >
+                      <Clock className="w-3.5 h-3.5" /> Schedule Interview 🟡
+                    </button>
+                  )}
+
+                  {activeModalCandidate.status === 'contacted' && (
+                    <button
+                      onClick={() =>
+                        handleUpdateStatus(
+                          activeModalCandidate.id,
+                          activeModalCandidate.name,
+                          'converted'
+                        )
+                      }
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      title="Proceed to Two-Step Selection Protocol"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Mark Selected 🟢
+                    </button>
+                  )}
+
+                  {activeModalCandidate.status === 'converted' && (
+                    <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Candidate Hired
+                    </span>
+                  )}
+
+                  {activeModalCandidate.status !== 'rejected' && (
+                    <button
+                      onClick={() =>
+                        handleUpdateStatus(
+                          activeModalCandidate.id,
+                          activeModalCandidate.name,
+                          'rejected'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black flex items-center gap-1 shadow-xs cursor-pointer"
+                    >
+                      <XCircle className="w-3.5 h-3.5" /> Mark Rejected 🔴
+                    </button>
+                  )}
 
                   <button
                     onClick={() => setCandidateToDelete(activeModalCandidate)}
@@ -1328,6 +1451,181 @@ export default function CandidatesAdminPage() {
                   <span>{isDispatchingSingleEmail ? 'Dispatching...' : 'Send Official Email'}</span>
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Two-Step Candidate Selection Verification Protocol Modal ─── */}
+      <AnimatePresence>
+        {candidateForSelection && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/70 backdrop-blur-xs"
+              onClick={() => !isConfirmingSelection && setCandidateForSelection(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 z-10 overflow-hidden"
+            >
+              {/* Step indicator header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center">
+                    {selectionStep}/2
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">
+                      {selectionStep === 1
+                        ? 'Step 1 of 2: Candidate & Interview Review'
+                        : 'Step 2 of 2: Final Selection Authorization'}
+                    </h3>
+                    <p className="text-[11px] font-bold text-slate-400">
+                      Enterprise Recruitment Protocol Verification
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !isConfirmingSelection && setCandidateForSelection(null)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Step 1 Content */}
+              {selectionStep === 1 && (
+                <div className="py-4 space-y-4">
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                          Candidate
+                        </div>
+                        <div className="text-base font-black text-slate-900">
+                          {candidateForSelection.name}
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                        {candidateForSelection.refId}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      <span className="font-bold text-slate-800">Applied Role:</span>{' '}
+                      {candidateForSelection.rolesString}
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      <span className="font-bold text-slate-800">Contact:</span>{' '}
+                      {candidateForSelection.phone} | {candidateForSelection.email}
+                    </div>
+                  </div>
+
+                  {coolingWarning ? (
+                    <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 text-xs space-y-1.5">
+                      <div className="flex items-center gap-1.5 font-black text-amber-800">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>24-Hour Evaluation Window Advisory</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-amber-800">
+                        {coolingWarning}
+                      </p>
+                      <p className="text-[10px] text-amber-700 font-medium">
+                        * If this candidate had already completed their offline in-person interview prior to this CRM entry, you may proceed to Step 2 to sign off.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 font-semibold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Interview stage and evaluation cooling period satisfied.</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setCandidateForSelection(null)}
+                      className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectionStep(2)}
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Proceed to Step 2</span>
+                      <span>➔</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2 Content */}
+              {selectionStep === 2 && (
+                <div className="py-4 space-y-4">
+                  <div className="p-4 bg-emerald-50/80 rounded-2xl border border-emerald-200 text-emerald-950 space-y-2">
+                    <div className="flex items-center gap-2 text-emerald-800 font-black text-sm">
+                      <Award className="w-4 h-4 text-emerald-600" />
+                      <span>Official Selection & Hire Authorization</span>
+                    </div>
+                    <p className="text-xs text-emerald-900 leading-relaxed">
+                      You are about to officially mark <strong>{candidateForSelection.name}</strong> as <strong>SELECTED / HIRED</strong> for <strong>{candidateForSelection.rolesString}</strong>.
+                    </p>
+                    <p className="text-[11px] text-emerald-800">
+                      This will commit the status to Supabase as an approved hire and record your audit confirmation.
+                    </p>
+                  </div>
+
+                  {/* Mandatory Checkbox */}
+                  <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer hover:bg-slate-100/70 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={selectionAgreed}
+                      onChange={(e) => setSelectionAgreed(e.target.checked)}
+                      className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-bold text-slate-800 leading-snug">
+                      I confirm that {candidateForSelection.name} has completed the required interview, document verification has been reviewed, and this hiring decision is approved.
+                    </span>
+                  </label>
+
+                  <div className="flex items-center justify-between gap-2 pt-2">
+                    <button
+                      type="button"
+                      disabled={isConfirmingSelection}
+                      onClick={() => setSelectionStep(1)}
+                      className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                    >
+                      ← Back to Step 1
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isConfirmingSelection}
+                        onClick={() => setCandidateForSelection(null)}
+                        className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!selectionAgreed || isConfirmingSelection}
+                        onClick={handleFinalizeSelection}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{isConfirmingSelection ? 'Confirming...' : 'Confirm & Mark Selected 🟢'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
