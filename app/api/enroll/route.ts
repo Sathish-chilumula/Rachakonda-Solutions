@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { sendCounselingInquiryEmail } from '@/lib/email';
+import {
+  sendCounselingInquiryEmail,
+  sendEnrollmentAdminNotificationEmail,
+} from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,14 +56,46 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    // 3. Automated counseling acknowledgment email (sent from admissions@rachakondasolutions.com)
-    if (email && email.includes('@')) {
-      sendCounselingInquiryEmail({
-        to: email.trim(),
-        name: name.trim(),
-        course,
-        category: category || 'Education Guidance',
-      }).catch((e) => console.error('Counseling email dispatch error:', e));
+    // 3. Automated dual-provider email notifications (Resend primary, Brevo fallback)
+    try {
+      const emailTasks: Promise<any>[] = [];
+
+      // A. Acknowledgment to student (if email provided)
+      if (email && email.includes('@')) {
+        emailTasks.push(
+          sendCounselingInquiryEmail({
+            to: email.trim(),
+            name: name.trim(),
+            course,
+            category: category || 'Education Guidance',
+          })
+        );
+      }
+
+      // B. Alert to internal management
+      emailTasks.push(
+        sendEnrollmentAdminNotificationEmail({
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email?.trim(),
+          course,
+          category: category || 'Education Guidance',
+          state: state || 'Telangana',
+        })
+      );
+
+      const results = await Promise.allSettled(emailTasks);
+      const studentAckSent = results[0]?.status === 'fulfilled' && (results[0] as any).value?.success;
+      if (studentAckSent && leadData?.id) {
+        await supabaseAdmin
+          .from('leads')
+          .update({
+            internal_notes: `[EMAIL: enrollment_ack | ${new Date().toISOString()}]`,
+          })
+          .eq('id', leadData.id);
+      }
+    } catch (e) {
+      console.error('Counseling email dispatch error:', e);
     }
 
     return NextResponse.json({

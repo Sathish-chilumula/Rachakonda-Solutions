@@ -712,25 +712,41 @@ export default function CandidatesAdminPage() {
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 rounded-full border border-blue-400/30 text-blue-300 text-xs font-bold">
               <Mail className="w-3.5 h-3.5" />
-              <span>Resend Official Gateway &bull; careers@rachakondasolutions.com</span>
+              <span>Multi-Provider Gateway &bull; Resend (Primary) + Brevo (Fallback)</span>
             </div>
             <h3 className="text-xl font-black text-white font-display">
               Candidate Confirmation &amp; Interview Email Automation
             </h3>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
-              Track candidate emails in real-time. Resend free tier permits <strong>100 emails/day</strong>. You can safely dispatch today&apos;s batch of up to 90 emails with automatic duplicate protection.
+              {stats.emailUnsent === 0
+                ? 'All existing candidates have received their official confirmation letters. New applicants receive instant confirmations automatically upon registration via real-time triggers.'
+                : `Track candidate emails in real-time. Resend provides 100/day and Brevo provides 300/day (combined 400/day). You can safely dispatch the remaining ${stats.emailUnsent} unsent candidate(s) below.`}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => handleBatchSendConfirmation(70)}
-              disabled={isSendingBatch || stats.emailUnsent === 0}
-              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Sparkles className={`w-4 h-4 ${isSendingBatch ? 'animate-spin' : ''}`} />
-              <span>{isSendingBatch ? 'Sending Today\'s Batch...' : `Send Today's Batch (${Math.min(70, stats.emailUnsent)} Unsent)`}</span>
-            </button>
+            {stats.emailUnsent === 0 ? (
+              <div className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                    All Candidates Confirmed (100%)
+                  </div>
+                  <div className="text-[11px] text-emerald-200/80 font-medium">
+                    0 Unsent Remaining &bull; Real-time Trigger Active
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => handleBatchSendConfirmation(70)}
+                disabled={isSendingBatch}
+                className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Sparkles className={`w-4 h-4 ${isSendingBatch ? 'animate-spin' : ''}`} />
+                <span>{isSendingBatch ? 'Sending Today\'s Batch...' : `Send Today's Batch (${Math.min(70, stats.emailUnsent)} Unsent)`}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -744,13 +760,17 @@ export default function CandidatesAdminPage() {
             <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">✓ Confirmation Sent</span>
             <span className="text-xl font-black text-emerald-300">{stats.emailSent}</span>
           </div>
-          <div className="bg-amber-500/10 rounded-xl p-3 border border-amber-500/20">
-            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider block">⏳ Unsent / Pending</span>
-            <span className="text-xl font-black text-amber-300">{stats.emailUnsent}</span>
+          <div className={`${stats.emailUnsent === 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'} rounded-xl p-3 border`}>
+            <span className={`text-[11px] font-bold ${stats.emailUnsent === 0 ? 'text-emerald-400' : 'text-amber-400'} uppercase tracking-wider block`}>
+              {stats.emailUnsent === 0 ? '✓ Delivery Status' : '⏳ Unsent / Pending'}
+            </span>
+            <span className={`text-xl font-black ${stats.emailUnsent === 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+              {stats.emailUnsent === 0 ? '100% Cleared' : stats.emailUnsent}
+            </span>
           </div>
           <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/20">
-            <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider block">Daily Free Quota</span>
-            <span className="text-xl font-black text-blue-300">100 / Day</span>
+            <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider block">Combined Daily Quota</span>
+            <span className="text-xl font-black text-blue-300">400 / Day</span>
           </div>
         </div>
       </div>

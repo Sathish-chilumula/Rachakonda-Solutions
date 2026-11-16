@@ -14,7 +14,7 @@ export const CONTACT_FROM_EMAIL = 'Rachakonda Solutions <contact@rachakondasolut
 export const DEFAULT_FROM_EMAIL = CAREERS_FROM_EMAIL;
 
 export const ADMIN_NOTIFICATION_EMAIL =
-  process.env.ADMIN_NOTIFICATION_EMAIL || 'contact@rachakondasolutions.com';
+  process.env.ADMIN_NOTIFICATION_EMAIL || 'chilumula62@gmail.com';
 
 /**
  * Resolves the appropriate verified sender email based on the form source.
@@ -740,6 +740,269 @@ export async function sendCounselingInquiryEmail({
       to: to.trim(),
       subject: `Admissions & Counseling Inquiry: ${course} - Rachakonda Solutions`,
       html: htmlContent,
+    });
+
+    if (!sendRes.success) return { success: false, error: sendRes.error };
+    return { success: true, messageId: sendRes.messageId };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * Sends an official acknowledgment email to visitors submitting the Contact Us form.
+ */
+export async function sendContactConfirmationEmail({
+  to,
+  name,
+  subject,
+  phone,
+}: {
+  to: string;
+  name: string;
+  subject: string;
+  phone: string;
+}) {
+  if (!process.env.RESEND_API_KEY && !process.env.BREVO_API_KEY) {
+    return { success: false, reason: 'Email API key missing' };
+  }
+  if (!to || !to.includes('@')) return { success: false, reason: 'Invalid email' };
+
+  try {
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Inquiry Received - Rachakonda Solutions</title></head>
+<body style="margin: 0; padding: 0; background-color: #0b1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0b1120; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 36px 30px; text-align: center; border-bottom: 3px solid #f59e0b;">
+              <div style="font-size: 24px; font-weight: 800; color: #ffffff;">
+                Rachakonda <span style="color: #f59e0b;">Solutions</span>
+              </div>
+              <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 2px; font-weight: 700; margin-top: 4px;">
+                ESTD 2012 &bull; Education, Admissions &amp; Career Guidance
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 35px 30px 25px 30px;">
+              <span style="display: inline-block; background-color: #ecfdf5; color: #047857; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 9999px; border: 1px solid #a7f3d0;">
+                ✓ Message Received
+              </span>
+              <h2 style="font-size: 22px; font-weight: 700; color: #0f172a; margin: 16px 0 8px 0;">
+                Dear ${escapeHtml(name)},
+              </h2>
+              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 16px 0;">
+                Thank you for contacting <strong>Rachakonda Solutions</strong> regarding <strong>${escapeHtml(subject)}</strong>. We have officially recorded your request.
+              </p>
+              <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
+                <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">
+                  What Happens Next?
+                </div>
+                <p style="font-size: 13px; color: #475569; margin: 0; line-height: 1.5;">
+                  Our expert guidance counselors will review your details and reach out to you directly via call or WhatsApp at <strong>${escapeHtml(phone)}</strong> within 24 business hours.
+                </p>
+              </div>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <a href="https://wa.me/919640333313?text=Hi%20Rachakonda%20Solutions,%20I%20submitted%20an%20inquiry%20regarding%20${encodeURIComponent(subject)}" 
+                       style="display: inline-block; background-color: #16a34a; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 8px; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);">
+                      💬 Connect on WhatsApp for Instant Support
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f1f5f9; padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
+              <p style="margin: 0 0 6px 0; font-weight: bold; color: #334155;">Rachakonda Solutions Pvt Ltd</p>
+              <p style="margin: 0 0 6px 0;">Prashantha Complex, 2nd &amp; 3rd Floor, Above LIC Office, Beside Gajwel Bus Stand Main Road, Gajwel, Telangana 502278</p>
+              <p style="margin: 0; color: #94a3b8;">Helpline: +91 9640333313 &bull; <a href="https://rachakondasolutions.com" style="color: #2563eb; text-decoration: none;">rachakondasolutions.com</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    const sendRes = await sendEmailViaAvailableProvider({
+      from: CONTACT_FROM_EMAIL,
+      to: to.trim(),
+      subject: `Inquiry Received: ${subject} - Rachakonda Solutions`,
+      html: htmlContent,
+    });
+
+    if (!sendRes.success) return { success: false, error: sendRes.error };
+    return { success: true, messageId: sendRes.messageId };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * Sends an instant notification to internal admin/management when a new Contact Us form is submitted.
+ */
+export async function sendContactAdminNotificationEmail({
+  name,
+  phone,
+  email,
+  state,
+  subject,
+  message,
+}: {
+  name: string;
+  phone: string;
+  email?: string;
+  state?: string;
+  subject?: string;
+  message?: string;
+}) {
+  if (!process.env.RESEND_API_KEY && !process.env.BREVO_API_KEY) {
+    return { success: false, reason: 'Email API key missing' };
+  }
+
+  try {
+    const adminHtml = `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; color: #1e293b; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 8px; padding: 24px; background: #ffffff;">
+    <h2 style="color: #0f172a; margin-top: 0; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+      🔔 New Contact Form Inquiry: ${escapeHtml(name)}
+    </h2>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px;">
+      <tr style="background: #f8fafc;">
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; width: 30%;">Full Name</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;">${escapeHtml(name)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">Mobile</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;"><a href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a></td>
+      </tr>
+      <tr style="background: #f8fafc;">
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">Email</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;">${email ? `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>` : 'Not provided'}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">Subject / Topic</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;">${escapeHtml(subject || 'General Inquiry')}</td>
+      </tr>
+      <tr style="background: #f8fafc;">
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">State / Location</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;">${escapeHtml(state || 'Telangana')}</td>
+      </tr>
+      ${message ? `
+      <tr>
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">Message</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0; line-height: 1.5;">${escapeHtml(message)}</td>
+      </tr>
+      ` : ''}
+    </table>
+    <div style="margin-top: 24px; text-align: center;">
+      <a href="https://rachakondasolutions.com/crm/leads" style="background: #0f172a; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block;">
+        View in Rachakonda CRM Leads &rarr;
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    const sendRes = await sendEmailViaAvailableProvider({
+      from: CONTACT_FROM_EMAIL,
+      to: ADMIN_NOTIFICATION_EMAIL,
+      subject: `[New Inquiry] ${name} - ${subject || 'General Inquiry'}`,
+      html: adminHtml,
+    });
+
+    if (!sendRes.success) return { success: false, error: sendRes.error };
+    return { success: true, messageId: sendRes.messageId };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
+ * Sends an instant notification to internal admin when a student applies for a course or counseling.
+ */
+export async function sendEnrollmentAdminNotificationEmail({
+  name,
+  phone,
+  email,
+  course,
+  category,
+  state,
+}: {
+  name: string;
+  phone: string;
+  email?: string;
+  course: string;
+  category?: string;
+  state?: string;
+}) {
+  if (!process.env.RESEND_API_KEY && !process.env.BREVO_API_KEY) {
+    return { success: false, reason: 'Email API key missing' };
+  }
+
+  try {
+    const adminHtml = `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; color: #1e293b; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 8px; padding: 24px; background: #ffffff;">
+    <h2 style="color: #0f172a; margin-top: 0; border-bottom: 2px solid #10b981; padding-bottom: 10px;">
+      🎓 New Course Enrollment: ${escapeHtml(name)}
+    </h2>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px;">
+      <tr style="background: #f8fafc;">
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; width: 30%;">Student Name</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;">${escapeHtml(name)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">Course Selected</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #0f172a;">${escapeHtml(course)}</td>
+      </tr>
+      <tr style="background: #f8fafc;">
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">Category</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;">${escapeHtml(category || 'General')}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">Mobile</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;"><a href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a></td>
+      </tr>
+      <tr style="background: #f8fafc;">
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">Email</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;">${email ? `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>` : 'Not provided'}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">State</td>
+        <td style="padding: 8px; border: 1px solid #e2e8f0;">${escapeHtml(state || 'Telangana')}</td>
+      </tr>
+    </table>
+    <div style="margin-top: 24px; text-align: center;">
+      <a href="https://rachakondasolutions.com/crm/leads" style="background: #0f172a; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block;">
+        View in Rachakonda CRM Leads &rarr;
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    const sendRes = await sendEmailViaAvailableProvider({
+      from: ADMISSIONS_FROM_EMAIL,
+      to: ADMIN_NOTIFICATION_EMAIL,
+      subject: `[New Student Enrollment] ${name} - ${course}`,
+      html: adminHtml,
     });
 
     if (!sendRes.success) return { success: false, error: sendRes.error };
