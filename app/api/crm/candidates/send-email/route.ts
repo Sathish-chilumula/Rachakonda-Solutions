@@ -4,13 +4,26 @@ import {
   sendCareerApplicationConfirmationEmail,
   sendInterviewInvitationEmail,
   sendCandidateRejectionEmail,
+  sendCandidateOfferLetterEmail,
 } from '@/lib/email';
 import { recordEmailLogTag, recordInterviewScheduledTag, parseCandidateLead } from '@/lib/candidate-utils';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { candidateId, emailType, interviewDate, customNotes } = body;
+    const {
+      candidateId,
+      emailType,
+      interviewDate,
+      customNotes,
+      designation,
+      salary,
+      joiningDate,
+      reportingLocation,
+      reportingAuthority,
+      customSubject,
+      customMessage,
+    } = body;
 
     if (!candidateId || !emailType) {
       return NextResponse.json({ error: 'candidateId and emailType are required' }, { status: 400 });
@@ -34,7 +47,20 @@ export async function POST(request: NextRequest) {
 
     let sendResult: any;
 
-    if (emailType === 'interview') {
+    if (emailType === 'offer_letter') {
+      sendResult = await sendCandidateOfferLetterEmail({
+        to: c.email,
+        name: c.name,
+        referenceId: c.refId,
+        designation: designation || c.rolesString || 'Staff Position',
+        salary: salary || 'As discussed during interview',
+        joiningDate: joiningDate || new Date(Date.now() + 7 * 86400000).toISOString(),
+        reportingLocation: reportingLocation || 'Gajwel Main Campus, Telangana',
+        reportingAuthority: reportingAuthority || 'Managing Director / HR Department',
+        customSubject,
+        customMessage,
+      });
+    } else if (emailType === 'interview') {
       sendResult = await sendInterviewInvitationEmail({
         to: c.email,
         name: c.name,
@@ -78,7 +104,9 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     };
 
-    if (emailType === 'interview') {
+    if (emailType === 'offer_letter') {
+      updatePayload.status = 'converted';
+    } else if (emailType === 'interview') {
       updatedNotes = recordInterviewScheduledTag(updatedNotes);
       updatePayload.internal_notes = updatedNotes;
       updatePayload.status = 'contacted';

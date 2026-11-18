@@ -40,6 +40,10 @@ import {
   exportCandidatesToCSV,
   checkCandidateSelectionEligibility,
   recordInterviewScheduledTag,
+  recordEmailLogTag,
+  extractCleanHumanNotes,
+  mergeHumanNotesWithTags,
+  recordSelectionDecisionTag,
 } from '@/lib/candidate-utils';
 import {
   CandidateInterviewState,
@@ -47,6 +51,7 @@ import {
 } from '@/lib/interview-types';
 import CandidatesTable from '@/components/crm/CandidatesTable';
 import InterviewScorecardModal from '@/components/crm/InterviewScorecardModal';
+import FinalCandidateDecisionModal from '@/components/crm/FinalCandidateDecisionModal';
 import Link from 'next/link';
 import { useCRM } from '../context';
 
@@ -61,7 +66,8 @@ export default function CandidatesAdminPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeModalCandidate, setActiveModalCandidate] = useState<CandidateItem | null>(null);
   const [activeScorecardCandidate, setActiveScorecardCandidate] = useState<CandidateItem | null>(null);
-  const [roundFilter, setRoundFilter] = useState<'all' | 'r1' | 'r2' | 'r3' | 'cleared' | 'interview_rejected'>('all');
+  const [activeDecisionCandidate, setActiveDecisionCandidate] = useState<CandidateItem | null>(null);
+  const [roundFilter, setRoundFilter] = useState<'all' | 'r1' | 'r2' | 'r3' | 'cleared' | 'shortlisted_pool' | 'interview_rejected'>('all');
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState<string>('');
   const [savingNote, setSavingNote] = useState<boolean>(false);
@@ -320,25 +326,31 @@ export default function CandidatesAdminPage() {
     }
   };
 
-  // Save Interview Notes
+  // Save Interview Notes (preserving system tags in background)
   const handleSaveNotes = async (candidateId: string) => {
     setSavingNote(true);
     try {
+      const candidateObj = candidates.find((c) => c.id === candidateId);
+      const mergedNotes = mergeHumanNotesWithTags(candidateObj?.internalNotes, noteText);
+
       const { error } = await supabase
         .from('leads')
         .update({
-          internal_notes: noteText,
+          internal_notes: mergedNotes,
           updated_at: new Date().toISOString(),
         })
         .eq('id', candidateId);
 
       if (!error) {
+        const cleanNotes = extractCleanHumanNotes(mergedNotes);
         setCandidates((prev) =>
-          prev.map((c) => (c.id === candidateId ? { ...c, internalNotes: noteText } : c))
+          prev.map((c) =>
+            c.id === candidateId ? { ...c, internalNotes: mergedNotes, cleanNotes } : c
+          )
         );
         if (activeModalCandidate?.id === candidateId) {
           setActiveModalCandidate((prev) =>
-            prev ? { ...prev, internalNotes: noteText } : null
+            prev ? { ...prev, internalNotes: mergedNotes, cleanNotes } : null
           );
         }
         setEditingNotesId(null);
@@ -348,6 +360,168 @@ export default function CandidatesAdminPage() {
       }
     } finally {
       setSavingNote(false);
+    }
+  };
+
+  // Handle Final Candidate Decision: Shortlisted on Hold / Selected Offer Letter / Rejected
+  const handleConfirmSelectionDecision = async ({
+    candidateId,
+    decision,
+    notes,
+    offerDetails,
+  }: {
+    candidateId: string;
+    decision: 'shortlisted_hold' | 'offer_approved' | 'rejected';
+    notes?: string;
+    offerDetails?: {
+      designation: string;
+      salary: string;
+      joiningDate: string;
+      reportingLocation: string;
+      reportingAuthority: string;
+      customSubject: string;
+      customMessage: string;
+      sendEmail: boolean;
+    };
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const candidateObj = candidates.find((c) => c.id === candidateId);
+      if (!candidateObj) return { success: false, error: 'Candidate record not found' };
+
+      const nowIso = new Date().toISOString();
+      let updatedNotes = recordSelectionDecisionTag(candidateObj.internalNotes, decision, notes);
+      let newLeadStatus = candidateObj.status;
+
+      if (decision === 'offer_approved') {
+        newLeadStatus = 'converted';
+        updatedNotes = `[STATUS: converted | ${nowIso}]\n${updatedNotes}`;
+
+        // Dispatch Offer Letter Email if requested
+        if (
+          offerDetails &&
+          offerDetails.sendEmail &&
+          candidateObj.email &&
+          candidateObj.email.includes('@')
+        ) {
+          showToast(`Dispatching Official Offer Letter to ${candidateObj.name}...`);
+          try {
+            const emailRes = await fetch('/api/crm/candidates/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                candidateId: candidateObj.id,
+                emailType: 'offer_letter',
+                designation: offerDetails.designation,
+                salary: offerDetails.salary,
+                joiningDate: offerDetails.joiningDate,
+                reportingLocation: offerDetails.reportingLocation,
+                reportingAuthority: offerDetails.reportingAuthority,
+                customSubject: offerDetails.customSubject,
+                customMessage: offerDetails.customMessage,
+              }),
+            });
+            const emailData = await emailRes.json();
+            if (!emailData.success) {
+              console.warn('Offer letter dispatch warning:', emailData.error);
+            } else {
+              updatedNotes = recordEmailLogTag(updatedNotes, 'offer_letter');
+            }
+          } catch (e: any) {
+            console.warn('Offer email exception:', e.message);
+          }
+        }
+      } else if (decision === 'shortlisted_hold') {
+        newLeadStatus = candidateObj.status === 'new' ? 'contacted' : candidateObj.status;
+      } else if (decision === 'rejected') {
+        newLeadStatus = 'rejected';
+        updatedNotes = `[STATUS: rejected | ${nowIso}]\n${updatedNotes}`;
+      }
+
+      // Update Supabase leads
+      const { error: dbErr } = await supabase
+        .from('leads')
+        .update({
+          status: newLeadStatus,
+          internal_notes: updatedNotes,
+          updated_at: nowIso,
+        })
+        .eq('id', candidateId);
+
+      if (dbErr) return { success: false, error: dbErr.message };
+
+      // Write to audit_logs
+      try {
+        await supabase.from('audit_logs').insert({
+          action: `candidate_${decision}`,
+          entity_type: 'candidate',
+          entity_id: candidateId,
+          details: {
+            candidateName: candidateObj.name,
+            refId: candidateObj.refId,
+            decision,
+            notes,
+            offerDetails,
+            recordedBy: profile?.email || 'CRM Admin',
+          },
+        });
+      } catch (logErr) {
+        console.warn('Audit log write skipped:', logErr);
+      }
+
+      // Update local state reactively
+      const cleanNotes = extractCleanHumanNotes(updatedNotes);
+      let statusLabel = candidateObj.statusLabel;
+      if (newLeadStatus === 'converted') statusLabel = 'Selected / Hired';
+      else if (newLeadStatus === 'rejected') statusLabel = 'Rejected';
+      else if (decision === 'shortlisted_hold') statusLabel = 'Shortlisted (On Hold Pool)';
+
+      setCandidates((prev) =>
+        prev.map((c) =>
+          c.id === candidateId
+            ? {
+                ...c,
+                status: newLeadStatus,
+                statusLabel,
+                internalNotes: updatedNotes,
+                cleanNotes,
+                selectionVerdict: decision,
+                selectionNotes: notes,
+                lastEmailType: decision === 'offer_approved' ? 'offer_letter' : c.lastEmailType,
+              }
+            : c
+        )
+      );
+
+      if (activeModalCandidate?.id === candidateId) {
+        setActiveModalCandidate((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: newLeadStatus,
+                statusLabel,
+                internalNotes: updatedNotes,
+                cleanNotes,
+                selectionVerdict: decision,
+                selectionNotes: notes,
+                lastEmailType: decision === 'offer_approved' ? 'offer_letter' : prev.lastEmailType,
+              }
+            : null
+        );
+      }
+
+      let toastMsg = 'Status recorded';
+      if (decision === 'offer_approved') {
+        toastMsg = `🎉 ${candidateObj.name} officially SELECTED! Offer Letter processed.`;
+      } else if (decision === 'shortlisted_hold') {
+        toastMsg = `🟡 ${candidateObj.name} saved in Shortlisted (On Hold) Pool.`;
+      } else if (decision === 'rejected') {
+        toastMsg = `Candidate ${candidateObj.name} marked as Rejected.`;
+      }
+
+      showToast(toastMsg);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error recording decision' };
     }
   };
 
@@ -559,6 +733,7 @@ export default function CandidatesAdminPage() {
         (roundFilter === 'r2' && item.interviewEvals?.round1.completed && item.interviewEvals.round1.status === 'passed' && (!item.interviewEvals?.round2.completed || item.interviewEvals.round2.status === 'pending')) ||
         (roundFilter === 'r3' && item.interviewEvals?.round2.completed && item.interviewEvals.round2.status === 'passed' && (!item.interviewEvals?.round3.completed || item.interviewEvals.round3.status === 'pending')) ||
         (roundFilter === 'cleared' && item.interviewEvals?.allRoundsCleared) ||
+        (roundFilter === 'shortlisted_pool' && item.selectionVerdict === 'shortlisted_hold') ||
         (roundFilter === 'interview_rejected' && item.interviewEvals?.isHaltRejected);
 
       return matchesStatus && matchesRole && matchesSearch && matchesEmail && matchesRound;
@@ -578,7 +753,8 @@ export default function CandidatesAdminPage() {
     const r2Active = candidates.filter((c) => c.interviewEvals?.round1.completed && c.interviewEvals.round1.status === 'passed' && !c.interviewEvals?.round2.completed).length;
     const r3Active = candidates.filter((c) => c.interviewEvals?.round2.completed && c.interviewEvals.round2.status === 'passed' && !c.interviewEvals?.round3.completed).length;
     const allCleared = candidates.filter((c) => c.interviewEvals?.allRoundsCleared).length;
-    return { total, selected, rejected, interviewed, newApps, emailSent, emailUnsent, r1Pending, r2Active, r3Active, allCleared };
+    const shortlistedPool = candidates.filter((c) => c.selectionVerdict === 'shortlisted_hold').length;
+    return { total, selected, rejected, interviewed, newApps, emailSent, emailUnsent, r1Pending, r2Active, r3Active, allCleared, shortlistedPool };
   }, [candidates]);
 
   const handleExportAll = () => {
@@ -933,6 +1109,7 @@ export default function CandidatesAdminPage() {
             { id: 'r2', label: '2. In HR Round', count: stats.r2Active },
             { id: 'r3', label: '3. In Manager Round', count: stats.r3Active },
             { id: 'cleared', label: '✓ All 3 Rounds Cleared', count: stats.allCleared },
+            { id: 'shortlisted_pool', label: '🟡 Shortlisted (On Hold Pool)', count: stats.shortlistedPool },
             { id: 'interview_rejected', label: '❌ Rejected in Interview' },
           ].map((rTab) => (
             <button
@@ -1080,6 +1257,7 @@ export default function CandidatesAdminPage() {
               setEmailTypeToDispatch(c.status === 'contacted' ? 'interview' : c.status === 'rejected' ? 'rejected' : 'confirmation');
             }}
             onEvaluateInterview={(c) => setActiveScorecardCandidate(c)}
+            onOpenDecisionModal={(c) => setActiveDecisionCandidate(c)}
           />
         )}
 
@@ -1330,31 +1508,181 @@ export default function CandidatesAdminPage() {
                   </div>
                 </div>
 
-                {/* Admin Interview Notes Section */}
+                {/* ─── 3-Round Interview Assessment Visual Scorecard ───────────── */}
+                <div className="p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-2xl border border-blue-100 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <Award className="w-4 h-4 text-amber-500" />
+                      Official 3-Round Interview Assessment
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-baseline gap-1 bg-white px-2.5 py-1 rounded-xl border border-blue-200 shadow-2xs">
+                        <span className="text-[10px] font-bold text-slate-400">Total:</span>
+                        <span className="text-sm font-black text-blue-600">
+                          {activeModalCandidate.interviewEvals?.totalScore || 0}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">/ 30 pts</span>
+                        <span className="ml-1 text-[10px] font-extrabold text-emerald-700">
+                          ({activeModalCandidate.interviewEvals?.compositeVerdict || 'In Progress'})
+                        </span>
+                      </div>
+
+                      {activeModalCandidate.interviewEvals?.allRoundsCleared && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cand = activeModalCandidate;
+                            setActiveModalCandidate(null);
+                            setActiveDecisionCandidate(cand);
+                          }}
+                          className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black shadow-2xs flex items-center gap-1"
+                        >
+                          <span>Hiring / Offer Clearance</span>
+                          <span>→</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3 Round Mini Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {/* Round 1 */}
+                    <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold text-blue-600 uppercase">1. General Round</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-black ${
+                            activeModalCandidate.interviewEvals?.round1.completed
+                              ? activeModalCandidate.interviewEvals.round1.status === 'passed'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-rose-100 text-rose-800'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {activeModalCandidate.interviewEvals?.round1.score !== null
+                            ? `${activeModalCandidate.interviewEvals?.round1.score}/10`
+                            : 'Pending'}
+                        </span>
+                      </div>
+                      <p className="text-xs font-medium text-slate-700 italic line-clamp-2">
+                        {activeModalCandidate.interviewEvals?.round1.comments
+                          ? `"${activeModalCandidate.interviewEvals.round1.comments}"`
+                          : 'No evaluation remarks entered yet.'}
+                      </p>
+                      <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-100 flex items-center justify-between">
+                        <span>By: {activeModalCandidate.interviewEvals?.round1.interviewerName || '—'}</span>
+                        <span>{activeModalCandidate.interviewEvals?.round1.mode || 'In-Person'}</span>
+                      </div>
+                    </div>
+
+                    {/* Round 2 */}
+                    <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold text-amber-600 uppercase">2. HR Round</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-black ${
+                            activeModalCandidate.interviewEvals?.round2.completed
+                              ? activeModalCandidate.interviewEvals.round2.status === 'passed'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-rose-100 text-rose-800'
+                              : 'bg-slate-100 text-slate-400'
+                          }`}
+                        >
+                          {activeModalCandidate.interviewEvals?.round2.score !== null
+                            ? `${activeModalCandidate.interviewEvals?.round2.score}/10`
+                            : 'Pending'}
+                        </span>
+                      </div>
+                      <p className="text-xs font-medium text-slate-700 italic line-clamp-2">
+                        {activeModalCandidate.interviewEvals?.round2.comments
+                          ? `"${activeModalCandidate.interviewEvals.round2.comments}"`
+                          : 'No evaluation remarks entered yet.'}
+                      </p>
+                      <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-100 flex items-center justify-between">
+                        <span>By: {activeModalCandidate.interviewEvals?.round2.interviewerName || '—'}</span>
+                        <span>{activeModalCandidate.interviewEvals?.round2.mode || 'In-Person'}</span>
+                      </div>
+                    </div>
+
+                    {/* Round 3 */}
+                    <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold text-purple-600 uppercase">3. Manager Round</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-black ${
+                            activeModalCandidate.interviewEvals?.round3.completed
+                              ? activeModalCandidate.interviewEvals.round3.status === 'passed'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-rose-100 text-rose-800'
+                              : 'bg-slate-100 text-slate-400'
+                          }`}
+                        >
+                          {activeModalCandidate.interviewEvals?.round3.score !== null
+                            ? `${activeModalCandidate.interviewEvals?.round3.score}/10`
+                            : 'Pending'}
+                        </span>
+                      </div>
+                      <p className="text-xs font-medium text-slate-700 italic line-clamp-2">
+                        {activeModalCandidate.interviewEvals?.round3.comments
+                          ? `"${activeModalCandidate.interviewEvals.round3.comments}"`
+                          : 'No evaluation remarks entered yet.'}
+                      </p>
+                      <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-100 flex items-center justify-between">
+                        <span>By: {activeModalCandidate.interviewEvals?.round3.interviewerName || '—'}</span>
+                        <span>{activeModalCandidate.interviewEvals?.round3.mode || 'In-Person'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Clean Staff Notes & Remarks (RAW JSON tags completely removed!) */}
                 <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200/80 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5 text-amber-600" />
-                      Internal Interview Notes &amp; Remarks
+                      Additional Staff Remarks &amp; Internal Notes
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Clean notes only &bull; System tags preserved in background
                     </span>
                   </div>
 
                   <textarea
-                    rows={3}
-                    defaultValue={activeModalCandidate.internalNotes}
+                    rows={2}
+                    defaultValue={activeModalCandidate.cleanNotes}
                     onChange={(e) => setNoteText(e.target.value)}
-                    placeholder="Enter interview date, salary offered, test score, or selection feedback..."
+                    placeholder="Enter additional staff observations, salary negotiation notes, joining preferences..."
                     className="w-full p-3 rounded-xl border border-amber-200 bg-white text-xs font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20"
                   />
 
-                  <div className="flex justify-end">
+                  {/* Lifecycle History Pills */}
+                  <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {activeModalCandidate.selectionVerdict === 'shortlisted_hold' && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                          🟡 Shortlisted in Reserve Pool (On Hold)
+                        </span>
+                      )}
+                      {activeModalCandidate.lastEmailType && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          ✉️ Last Email: {activeModalCandidate.lastEmailType.toUpperCase()}
+                        </span>
+                      )}
+                      {activeModalCandidate.interviewScheduledAt && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                          📅 Scheduled: {new Date(activeModalCandidate.interviewScheduledAt).toLocaleDateString('en-IN')}
+                        </span>
+                      )}
+                    </div>
+
                     <button
                       type="button"
                       disabled={savingNote}
                       onClick={() => handleSaveNotes(activeModalCandidate.id)}
-                      className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+                      className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50"
                     >
-                      {savingNote ? 'Saving...' : 'Save Notes'}
+                      {savingNote ? 'Saving...' : 'Save Remarks'}
                     </button>
                   </div>
                 </div>
@@ -1374,6 +1702,21 @@ export default function CandidatesAdminPage() {
                   >
                     <Award className="w-3.5 h-3.5" /> 3-Round Scorecard
                   </button>
+
+                  {activeModalCandidate.interviewEvals?.allRoundsCleared && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cand = activeModalCandidate;
+                        setActiveModalCandidate(null);
+                        setActiveDecisionCandidate(cand);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" /> Final Decision / Offer Letter
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => window.print()}
@@ -1846,6 +2189,23 @@ export default function CandidatesAdminPage() {
           role: profile?.role || 'Interviewer',
         }}
         onSaveEvaluation={handleSaveEvaluation}
+        onOpenDecisionModal={(c) => {
+          setActiveScorecardCandidate(null);
+          setActiveDecisionCandidate(c);
+        }}
+      />
+
+      {/* ─── Enterprise Final Selection & Offer Letter Clearance Modal ─── */}
+      <FinalCandidateDecisionModal
+        isOpen={Boolean(activeDecisionCandidate)}
+        onClose={() => setActiveDecisionCandidate(null)}
+        candidate={activeDecisionCandidate}
+        currentUser={{
+          name: profile?.name || 'CRM Admin',
+          role: profile?.role || 'Admin',
+          email: profile?.email,
+        }}
+        onConfirmSelectionDecision={handleConfirmSelectionDecision}
       />
     </div>
   );

@@ -38,6 +38,7 @@ interface InterviewScorecardModalProps {
     candidateId: string,
     updatedState: CandidateInterviewState
   ) => Promise<{ success: boolean; error?: string }>;
+  onOpenDecisionModal?: (candidate: CandidateItem) => void;
 }
 
 export default function InterviewScorecardModal({
@@ -46,6 +47,7 @@ export default function InterviewScorecardModal({
   candidate,
   currentUser,
   onSaveEvaluation,
+  onOpenDecisionModal,
 }: InterviewScorecardModalProps) {
   const [activeRound, setActiveRound] = useState<1 | 2 | 3>(1);
   const [evalState, setEvalState] = useState<CandidateInterviewState | null>(null);
@@ -321,6 +323,31 @@ export default function InterviewScorecardModal({
               </div>
             </div>
           </div>
+
+          {/* All Rounds Cleared Success Banner */}
+          {evalState.allRoundsCleared && onOpenDecisionModal && (
+            <div className="mt-4 p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <div>
+                  <div className="text-xs font-black text-emerald-950">
+                    🎉 All 3 Interview Rounds Cleared ({evalState.totalScore}/30 pts)!
+                  </div>
+                  <div className="text-[11px] text-emerald-800">
+                    Candidate is eligible for Shortlisted Reserve Pool (On Hold) or Final Selection &amp; Offer Letter dispatch.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpenDecisionModal(candidate)}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs flex items-center gap-1.5 self-start sm:self-auto shrink-0"
+              >
+                <span>Hiring &amp; Offer Clearance</span>
+                <span>→</span>
+              </button>
+            </div>
+          )}
 
           {/* 3-Round Stepper Navigation with Sequential Locking */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-5">

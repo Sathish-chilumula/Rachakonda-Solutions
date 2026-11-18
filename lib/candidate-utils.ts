@@ -22,14 +22,80 @@ export interface CandidateItem {
   statusLabel: string;
   priority: string;
   internalNotes: string;
+  cleanNotes: string; // Human notes stripped of all machine tags
   createdAt: string;
   updatedAt?: string;
   rawRemarks: string;
   emailStatus: 'sent' | 'unsent';
   emailSentAt: string | null;
-  lastEmailType: 'confirmation' | 'interview' | 'rejected' | null;
+  lastEmailType: 'confirmation' | 'interview' | 'rejected' | 'offer_letter' | null;
   interviewScheduledAt?: string | null;
   interviewEvals: CandidateInterviewState;
+  selectionVerdict: 'none' | 'shortlisted_hold' | 'offer_approved' | 'rejected';
+  selectionNotes?: string;
+}
+
+/**
+ * Strips machine/system tags out of internal_notes so only clean human text is presented to staff.
+ */
+export function extractCleanHumanNotes(internalNotes?: string | null): string {
+  if (!internalNotes) return '';
+  return internalNotes
+    .replace(/\[INTERVIEW_EVALS_V1:\s*\{[\s\S]*?\}\]/gi, '')
+    .replace(/\[SELECTION_DECISION:\s*\{[\s\S]*?\}\]/gi, '')
+    .replace(/\[SELECTION_STATUS:\s*[^\]]+\]/gi, '')
+    .replace(/\[EMAIL:\s*[^\]]+\]/gi, '')
+    .replace(/\[INTERVIEW_SCHEDULED:\s*[^\]]+\]/gi, '')
+    .replace(/\[STATUS:\s*[^\]]+\]/gi, '')
+    .trim();
+}
+
+/**
+ * Merges updated human notes back into internal_notes while safely preserving all background system tags.
+ */
+export function mergeHumanNotesWithTags(
+  existingNotes: string | null | undefined,
+  newCleanNotes: string
+): string {
+  if (!existingNotes) return newCleanNotes.trim();
+
+  // Extract all system tags
+  const tags: string[] = [];
+  const tagPatterns = [
+    /\[INTERVIEW_EVALS_V1:\s*\{[\s\S]*?\}\]/gi,
+    /\[SELECTION_DECISION:\s*\{[\s\S]*?\}\]/gi,
+    /\[SELECTION_STATUS:\s*[^\]]+\]/gi,
+    /\[EMAIL:\s*[^\]]+\]/gi,
+    /\[INTERVIEW_SCHEDULED:\s*[^\]]+\]/gi,
+    /\[STATUS:\s*[^\]]+\]/gi,
+  ];
+
+  tagPatterns.forEach((pat) => {
+    const matches = existingNotes.match(pat);
+    if (matches) {
+      matches.forEach((m) => tags.push(m.trim()));
+    }
+  });
+
+  const clean = newCleanNotes.trim();
+  if (tags.length === 0) return clean;
+  if (!clean) return tags.join('\n');
+  return `${tags.join('\n')}\n\n${clean}`;
+}
+
+/**
+ * Records a selection decision tag (e.g. shortlisted_hold or offer_approved) into internal_notes.
+ */
+export function recordSelectionDecisionTag(
+  existingNotes: string | null | undefined,
+  verdict: 'shortlisted_hold' | 'offer_approved' | 'rejected',
+  notes?: string
+): string {
+  const now = new Date().toISOString();
+  const payload = JSON.stringify({ verdict, notes: notes || '', updatedAt: now });
+  const tag = `[SELECTION_DECISION: ${payload}]`;
+  const clean = (existingNotes || '').replace(/\[SELECTION_DECISION:\s*\{[\s\S]*?\}\]/gi, '').trim();
+  return clean ? `${tag}\n${clean}` : tag;
 }
 
 /**
@@ -37,11 +103,11 @@ export interface CandidateItem {
  */
 export function recordEmailLogTag(
   existingNotes: string | null | undefined,
-  type: 'confirmation' | 'interview' | 'rejected'
+  type: 'confirmation' | 'interview' | 'rejected' | 'offer_letter'
 ): string {
   const now = new Date().toISOString();
   const tag = `[EMAIL: ${type} | ${now}]`;
-  // Clean only duplicate tags of the SAME type, but preserve other lifecycle tags (e.g., confirmation + interview)
+  // Clean only duplicate tags of the SAME type, but preserve other lifecycle tags
   const sameTypeRegex = new RegExp(`\\[EMAIL:\\s*${type}\\s*\\|\\s*[^\\]]+\\]`, 'gi');
   const clean = (existingNotes || '').replace(sameTypeRegex, '').trim();
   return clean ? `${tag}\n${clean}` : tag;
@@ -214,6 +280,29 @@ export function parseCandidateLead(lead: any): CandidateItem {
   // Parse structured 3-round interview evaluation state
   const interviewEvals = parseInterviewEvaluations(internalNotes);
 
+  // Extract clean human notes (stripped of machine JSON tags)
+  const cleanNotes = extractCleanHumanNotes(internalNotes);
+
+  // Parse selection verdict (e.g. shortlisted_hold or offer_approved)
+  let selectionVerdict: 'none' | 'shortlisted_hold' | 'offer_approved' | 'rejected' = 'none';
+  let selectionNotes = '';
+  const selMatch = internalNotes.match(/\[SELECTION_DECISION:\s*(\{[\s\S]*?\})\]/i);
+  if (selMatch) {
+    try {
+      const parsed = JSON.parse(selMatch[1]);
+      selectionVerdict = parsed.verdict || 'none';
+      selectionNotes = parsed.notes || '';
+    } catch {}
+  } else if (internalNotes.includes('[SELECTION_STATUS: shortlisted_hold')) {
+    selectionVerdict = 'shortlisted_hold';
+  } else if (lead.status === 'converted') {
+    selectionVerdict = 'offer_approved';
+  }
+
+  if (selectionVerdict === 'shortlisted_hold' && lead.status !== 'converted' && lead.status !== 'rejected') {
+    statusLabel = 'Shortlisted (On Hold Pool)';
+  }
+
   return {
     id: lead.id,
     refId,
@@ -232,6 +321,7 @@ export function parseCandidateLead(lead: any): CandidateItem {
     statusLabel,
     priority: lead.priority || 'hot',
     internalNotes: internalNotes,
+    cleanNotes,
     createdAt: lead.created_at || new Date().toISOString(),
     updatedAt: lead.updated_at || undefined,
     rawRemarks: remarks,
@@ -240,6 +330,8 @@ export function parseCandidateLead(lead: any): CandidateItem {
     lastEmailType,
     interviewScheduledAt,
     interviewEvals,
+    selectionVerdict,
+    selectionNotes,
   };
 }
 

@@ -688,6 +688,189 @@ export async function sendCandidateRejectionEmail({
 }
 
 /**
+ * Sends an official, customizable Employment Offer Letter email to a selected candidate.
+ */
+export async function sendCandidateOfferLetterEmail({
+  to,
+  name,
+  referenceId,
+  designation,
+  salary,
+  joiningDate,
+  reportingLocation,
+  reportingAuthority = 'Managing Director / HR Desk',
+  customSubject,
+  customMessage,
+}: {
+  to: string;
+  name: string;
+  referenceId: string;
+  designation: string;
+  salary: string;
+  joiningDate: string;
+  reportingLocation: string;
+  reportingAuthority?: string;
+  customSubject?: string;
+  customMessage?: string;
+}) {
+  if (!process.env.RESEND_API_KEY && !process.env.BREVO_API_KEY) {
+    return { success: false, reason: 'Email API key missing' };
+  }
+  if (!to || !to.includes('@')) return { success: false, reason: 'Invalid email' };
+
+  try {
+    let formattedJoiningDate = joiningDate;
+    const parsedDate = new Date(joiningDate);
+    if (!isNaN(parsedDate.getTime())) {
+      formattedJoiningDate = parsedDate.toLocaleDateString('en-IN', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    }
+
+    const subject =
+      customSubject ||
+      `🎉 Official Offer of Employment: ${designation} - Rachakonda Solutions [Ref: ${referenceId}]`;
+
+    const customMessageHtml = customMessage
+      ? `<div style="background-color: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 12px; padding: 18px; margin-bottom: 24px; font-size: 13.5px; line-height: 1.6; color: #166534;">
+          ${escapeHtml(customMessage).replace(/\n/g, '<br/>')}
+        </div>`
+      : '';
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Official Employment Offer Letter - Rachakonda Solutions</title></head>
+<body style="margin: 0; padding: 0; background-color: #0b1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0b1120; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 620px; background-color: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);">
+          
+          <!-- Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #064e3b 0%, #0f172a 100%); padding: 38px 30px; text-align: center; border-bottom: 4px solid #10b981;">
+              <div style="font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
+                Rachakonda <span style="color: #34d399;">Solutions</span>
+              </div>
+              <div style="font-size: 11px; text-transform: uppercase; color: #a7f3d0; letter-spacing: 2.5px; font-weight: 700; margin-top: 5px;">
+                Human Resources &bull; Official Employment Offer
+              </div>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 35px 30px 25px 30px;">
+              <span style="display: inline-block; background-color: #d1fae5; color: #065f46; font-size: 12px; font-weight: 800; padding: 6px 16px; border-radius: 9999px; border: 1px solid #6ee7b7;">
+                🎉 CONGRATULATIONS &bull; OFFER OF EMPLOYMENT
+              </span>
+
+              <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 18px 0 10px 0;">
+                Dear ${escapeHtml(name)},
+              </h2>
+
+              <p style="font-size: 14px; line-height: 1.65; color: #475569; margin: 0 0 18px 0;">
+                On behalf of <strong>Rachakonda Solutions</strong>, we are thrilled to congratulate you on successfully clearing our comprehensive 3-round interview evaluation process (General Assessment, HR Round, and Hiring Manager Evaluation).
+              </p>
+
+              <p style="font-size: 14px; line-height: 1.65; color: #475569; margin: 0 0 22px 0;">
+                We were deeply impressed by your capabilities, professional background, and enthusiasm. We take great pleasure in offering you the position of <strong>${escapeHtml(designation)}</strong> with our organization.
+              </p>
+
+              ${customMessageHtml}
+
+              <!-- Offer Terms Card -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; margin-bottom: 24px; font-size: 13px;">
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: bold; width: 38%; color: #475569;">Candidate Reference ID</td>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; color: #0284c7; font-weight: bold; font-family: monospace;">${escapeHtml(referenceId)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #475569;">Designation / Role</td>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #0f172a;">${escapeHtml(designation)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #475569;">Offered Compensation</td>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #059669; font-size: 14px;">${escapeHtml(salary)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #475569;">Date of Joining</td>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0f172a;">${escapeHtml(formattedJoiningDate)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #475569;">Reporting Location</td>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0f172a;">${escapeHtml(reportingLocation)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 14px 18px; font-weight: bold; color: #475569;">Reporting Authority</td>
+                  <td style="padding: 14px 18px; font-weight: bold; color: #0f172a;">${escapeHtml(reportingAuthority)}</td>
+                </tr>
+              </table>
+
+              <!-- Onboarding Checklist -->
+              <div style="background-color: #f1f5f9; border-left: 4px solid #3b82f6; padding: 16px 18px; border-radius: 8px; margin-bottom: 24px;">
+                <div style="font-weight: 800; color: #1e293b; font-size: 13px; margin-bottom: 6px;">
+                  📋 Documents Required at the Time of Joining:
+                </div>
+                <ul style="margin: 0; padding-left: 18px; font-size: 12.5px; color: #475569; line-height: 1.6;">
+                  <li>Original &amp; Photocopy of Educational Qualifications / Degree Certificates</li>
+                  <li>Government-issued ID Proof (Aadhaar Card / PAN Card / Driving License)</li>
+                  <li>Relieving Letter &amp; Experience Certificate (if applicable)</li>
+                  <li>Bank Account Details / Cancelled Cheque for Payroll Processing</li>
+                  <li>3 Recent Passport-size Photographs</li>
+                </ul>
+              </div>
+
+              <p style="font-size: 13.5px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
+                Please reply to this email to confirm your acceptance of this offer and your confirmation of the joining date. If you have any questions or require any assistance, please feel free to reach out to our HR Helpdesk at <strong style="color: #0f172a;">+91 9640333313</strong>.
+              </p>
+
+              <p style="font-size: 14px; font-weight: bold; color: #0f172a; margin: 24px 0 0 0;">
+                Warm Regards,<br/>
+                <span style="font-weight: normal; color: #64748b; font-size: 13px;">
+                  Human Resources &amp; Talent Acquisition Team<br/>
+                  <strong>Rachakonda Solutions</strong><br/>
+                  Gajwel, Telangana &bull; www.rachakondasolutions.com
+                </span>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 20px; text-align: center; border-top: 1px solid #1e293b;">
+              <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+                This is an official employment offer communication from Rachakonda Solutions. Confidential.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    const sendRes = await sendEmailViaAvailableProvider({
+      from: CAREERS_FROM_EMAIL,
+      to: to.trim(),
+      subject,
+      html: htmlContent,
+    });
+
+    if (!sendRes.success) return { success: false, error: sendRes.error };
+    return { success: true, messageId: sendRes.messageId };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+/**
  * Sends student enrollment & counseling acknowledgment email.
  */
 export async function sendCounselingInquiryEmail({

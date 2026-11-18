@@ -14,6 +14,7 @@ interface CandidatesTableProps {
   onDeleteRequest: (candidate: CandidateItem) => void;
   onSendEmailRequest?: (candidate: CandidateItem) => void;
   onEvaluateInterview?: (candidate: CandidateItem) => void;
+  onOpenDecisionModal?: (candidate: CandidateItem) => void;
 }
 
 const statusStyles: Record<CandidateItem['status'], { pill: string; icon: typeof Clock }> = {
@@ -54,6 +55,7 @@ export default function CandidatesTable({
   onDeleteRequest,
   onSendEmailRequest,
   onEvaluateInterview,
+  onOpenDecisionModal,
 }: CandidatesTableProps) {
   const safeList = Array.isArray(candidates) ? candidates : [];
   const allSelected = safeList.length > 0 && safeList.every((c) => selectedIds.includes(c.id));
@@ -449,7 +451,18 @@ export default function CandidatesTable({
                           <span className="font-extrabold text-blue-700 tabular-nums text-[11px]">
                             {c.interviewEvals?.totalScore || 0} / 30 pts
                           </span>
-                          {onEvaluateInterview && (
+                          {onOpenDecisionModal && c.interviewEvals?.allRoundsCleared && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenDecisionModal(c)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-colors cursor-pointer border border-emerald-200 shadow-2xs"
+                            title="Final Hiring Decision & Offer Letter"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Offer</span>
+                          </button>
+                        )}
+                        {onEvaluateInterview && (
                             <button
                               type="button"
                               onClick={() => onEvaluateInterview(c)}
@@ -503,6 +516,17 @@ export default function CandidatesTable({
                           >
                             <Mail className="w-3.5 h-3.5" />
                             <span>Email</span>
+                          </button>
+                        )}
+                        {onOpenDecisionModal && c.interviewEvals?.allRoundsCleared && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenDecisionModal(c)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-colors cursor-pointer border border-emerald-200 shadow-2xs"
+                            title="Final Hiring Decision & Offer Letter"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Offer</span>
                           </button>
                         )}
                         {onEvaluateInterview && (
