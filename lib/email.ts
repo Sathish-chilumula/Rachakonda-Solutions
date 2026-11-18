@@ -8,6 +8,7 @@ export function getResendClient() {
 
 // Official senders by department / form type
 export const CAREERS_FROM_EMAIL = 'Rachakonda Careers <careers@rachakondasolutions.com>';
+export const HR_FROM_EMAIL = process.env.HR_FROM_EMAIL || 'Rachakonda HR <hr@rachakondasolutions.com>';
 export const ADMISSIONS_FROM_EMAIL = 'Rachakonda Admissions <admissions@rachakondasolutions.com>';
 export const CONTACT_FROM_EMAIL = 'Rachakonda Solutions <contact@rachakondasolutions.com>';
 
@@ -22,6 +23,7 @@ export const ADMIN_NOTIFICATION_EMAIL =
 export function getSenderForSource(source?: string): string {
   if (!source) return DEFAULT_FROM_EMAIL;
   const s = source.toLowerCase();
+  if (s.includes('hr') || s.includes('offer')) return HR_FROM_EMAIL;
   if (s.includes('career')) return CAREERS_FROM_EMAIL;
   if (s.includes('education') || s.includes('enroll') || s.includes('counseling')) {
     return ADMISSIONS_FROM_EMAIL;
@@ -42,11 +44,13 @@ export async function sendEmailViaAvailableProvider({
   to,
   subject,
   html,
+  replyTo,
 }: {
   from: string;
   to: string;
   subject: string;
   html: string;
+  replyTo?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string; provider?: 'resend' | 'brevo' }> {
   // 1. Try Resend if key is available
   const resend = getResendClient();
@@ -58,6 +62,7 @@ export async function sendEmailViaAvailableProvider({
         to: [to.trim()],
         subject,
         html,
+        ...(replyTo ? { replyTo } : {}),
       });
 
       if (!error && data?.id) {
@@ -81,6 +86,16 @@ export async function sendEmailViaAvailableProvider({
       const senderName = senderMatch ? senderMatch[1].trim() : 'Rachakonda Solutions';
       const senderEmail = senderMatch ? senderMatch[2].trim() : from;
 
+      const bodyPayload: Record<string, any> = {
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email: to.trim() }],
+        subject,
+        htmlContent: html,
+      };
+      if (replyTo) {
+        bodyPayload.replyTo = { email: replyTo.trim(), name: senderName };
+      }
+
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
@@ -88,12 +103,7 @@ export async function sendEmailViaAvailableProvider({
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({
-          sender: { name: senderName, email: senderEmail },
-          to: [{ email: to.trim() }],
-          subject,
-          htmlContent: html,
-        }),
+        body: JSON.stringify(bodyPayload),
       });
 
       const data = await res.json();
@@ -826,7 +836,7 @@ export async function sendCandidateOfferLetterEmail({
               </div>
 
               <p style="font-size: 13.5px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
-                Please reply to this email to confirm your acceptance of this offer and your confirmation of the joining date. If you have any questions or require any assistance, please feel free to reach out to our HR Helpdesk at <strong style="color: #0f172a;">+91 9640333313</strong>.
+                Please reply directly to this email or write to <strong style="color: #0f172a;">hr@rachakondasolutions.com</strong> to confirm your acceptance of this offer and your joining date. If you have any questions or require any assistance, please feel free to reach out to our HR Helpdesk at <strong style="color: #0f172a;">+91 9640333313</strong>.
               </p>
 
               <p style="font-size: 14px; font-weight: bold; color: #0f172a; margin: 24px 0 0 0;">
@@ -834,6 +844,7 @@ export async function sendCandidateOfferLetterEmail({
                 <span style="font-weight: normal; color: #64748b; font-size: 13px;">
                   Human Resources &amp; Talent Acquisition Team<br/>
                   <strong>Rachakonda Solutions</strong><br/>
+                  Email: hr@rachakondasolutions.com &bull; Phone: +91 9640333313<br/>
                   Gajwel, Telangana &bull; www.rachakondasolutions.com
                 </span>
               </p>
@@ -844,7 +855,7 @@ export async function sendCandidateOfferLetterEmail({
           <tr>
             <td style="background-color: #0f172a; padding: 20px; text-align: center; border-top: 1px solid #1e293b;">
               <p style="color: #94a3b8; font-size: 11px; margin: 0;">
-                This is an official employment offer communication from Rachakonda Solutions. Confidential.
+                This is an official employment offer communication from Rachakonda Solutions HR &bull; hr@rachakondasolutions.com. Confidential.
               </p>
             </td>
           </tr>
@@ -857,10 +868,11 @@ export async function sendCandidateOfferLetterEmail({
     `;
 
     const sendRes = await sendEmailViaAvailableProvider({
-      from: CAREERS_FROM_EMAIL,
+      from: HR_FROM_EMAIL,
       to: to.trim(),
       subject,
       html: htmlContent,
+      replyTo: 'hr@rachakondasolutions.com',
     });
 
     if (!sendRes.success) return { success: false, error: sendRes.error };

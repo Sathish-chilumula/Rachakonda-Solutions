@@ -469,20 +469,25 @@ export default function FinalCandidateDecisionModal({
 
               {/* Dispatch Email Checkbox */}
               <div className="pt-1">
-                <label className="flex items-center gap-2.5 cursor-pointer p-3 rounded-xl bg-white border border-emerald-200 shadow-2xs">
+                <label className="flex items-start gap-2.5 cursor-pointer p-3 rounded-xl bg-white border border-emerald-200 shadow-2xs">
                   <input
                     type="checkbox"
                     checked={sendEmail}
                     onChange={(e) => setSendEmail(e.target.checked)}
-                    className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                    className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
                   />
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 block">
-                      ✉️ Send Official Offer Letter Email to{' '}
-                      <strong className="text-blue-700">{candidate.email}</strong>
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      Dispatched with branded letterhead, onboarding checklist, and verified reference ID.
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="text-xs font-bold text-slate-900 block">
+                        ✉️ Send Official Offer Letter Email to{' '}
+                        <strong className="text-blue-700">{candidate.email}</strong>
+                      </span>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200">
+                        From: hr@rachakondasolutions.com
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      Dispatched from official <strong className="text-slate-700">Rachakonda HR &lt;hr@rachakondasolutions.com&gt;</strong> with branded letterhead, offer terms breakdown, and onboarding checklist.
                     </span>
                   </div>
                 </label>
