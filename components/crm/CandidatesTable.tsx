@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Phone, Mail, Eye, Trash2, CheckCircle2, Clock, XCircle, Sparkles } from 'lucide-react';
+import { Phone, Mail, Eye, Trash2, CheckCircle2, Clock, XCircle, Sparkles, Award } from 'lucide-react';
 import type { CandidateItem } from '@/lib/candidate-utils';
 
 interface CandidatesTableProps {
@@ -13,6 +13,7 @@ interface CandidatesTableProps {
   onUpdateStatus: (id: string, status: CandidateItem['status']) => void;
   onDeleteRequest: (candidate: CandidateItem) => void;
   onSendEmailRequest?: (candidate: CandidateItem) => void;
+  onEvaluateInterview?: (candidate: CandidateItem) => void;
 }
 
 const statusStyles: Record<CandidateItem['status'], { pill: string; icon: typeof Clock }> = {
@@ -52,6 +53,7 @@ export default function CandidatesTable({
   onUpdateStatus,
   onDeleteRequest,
   onSendEmailRequest,
+  onEvaluateInterview,
 }: CandidatesTableProps) {
   const safeList = Array.isArray(candidates) ? candidates : [];
   const allSelected = safeList.length > 0 && safeList.every((c) => selectedIds.includes(c.id));
@@ -159,6 +161,61 @@ export default function CandidatesTable({
                 </select>
               </div>
 
+              {/* 3-Round Interview Lifecycle Preview for Mobile */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-slate-400">3-Round Interview Pipeline</span>
+                  <span className="text-[11px] font-black text-blue-700 tabular-nums">
+                    {c.interviewEvals?.totalScore || 0} / 30 pts
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span
+                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                      c.interviewEvals?.round1.completed
+                        ? c.interviewEvals.round1.status === 'passed'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                    }`}
+                  >
+                    R1: {c.interviewEvals?.round1.score !== null ? `${c.interviewEvals.round1.score}/10` : '—'}
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                      c.interviewEvals?.round2.completed
+                        ? c.interviewEvals.round2.status === 'passed'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-slate-100 text-slate-400 border-slate-200'
+                    }`}
+                  >
+                    R2: {c.interviewEvals?.round2.score !== null ? `${c.interviewEvals.round2.score}/10` : '🔒'}
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                      c.interviewEvals?.round3.completed
+                        ? c.interviewEvals.round3.status === 'passed'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-slate-100 text-slate-400 border-slate-200'
+                    }`}
+                  >
+                    R3: {c.interviewEvals?.round3.score !== null ? `${c.interviewEvals.round3.score}/10` : '🔒'}
+                  </span>
+
+                  {onEvaluateInterview && (
+                    <button
+                      type="button"
+                      onClick={() => onEvaluateInterview(c)}
+                      className="ml-auto px-2 py-0.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-2xs"
+                    >
+                      {c.interviewEvals?.round1.completed ? 'Scorecard' : 'Evaluate'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Footer with phone & action buttons */}
               <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
                 <div className="flex items-center gap-2 text-xs">
@@ -232,6 +289,7 @@ export default function CandidatesTable({
                 <th className="px-4 py-3.5 min-w-[170px]">Contact Info</th>
                 <th className="px-4 py-3.5 min-w-[210px]">Applied Positions</th>
                 <th className="px-4 py-3.5 min-w-[160px]">Qualification &amp; Exp</th>
+                <th className="px-4 py-3.5 min-w-[210px]">Interview Pipeline (3 Rounds)</th>
                 <th className="px-4 py-3.5 min-w-[170px]">Recruitment Status</th>
                 <th className="px-4 py-3.5 min-w-[140px]">Applied Date</th>
                 <th className="sticky right-0 z-20 bg-slate-50/95 backdrop-blur-xs px-4 py-3.5 text-center shadow-[-4px_0_12px_-4px_rgba(15,23,42,0.08)]">
@@ -346,6 +404,64 @@ export default function CandidatesTable({
                       </div>
                     </td>
 
+                    {/* Interview Pipeline (3 Rounds) */}
+                    <td className="px-4 py-3.5">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                              c.interviewEvals?.round1.completed
+                                ? c.interviewEvals.round1.status === 'passed'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                            }`}
+                            title={`Round 1 (General): ${c.interviewEvals?.round1.status || 'Pending'}`}
+                          >
+                            R1: {c.interviewEvals?.round1.score !== null ? `${c.interviewEvals.round1.score}/10` : '—'}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                              c.interviewEvals?.round2.completed
+                                ? c.interviewEvals.round2.status === 'passed'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                                : 'bg-slate-50 text-slate-400 border-slate-200'
+                            }`}
+                            title={`Round 2 (HR): ${c.interviewEvals?.round2.status || 'Locked/Pending'}`}
+                          >
+                            R2: {c.interviewEvals?.round2.score !== null ? `${c.interviewEvals.round2.score}/10` : '🔒'}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                              c.interviewEvals?.round3.completed
+                                ? c.interviewEvals.round3.status === 'passed'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                                : 'bg-slate-50 text-slate-400 border-slate-200'
+                            }`}
+                            title={`Round 3 (Manager): ${c.interviewEvals?.round3.status || 'Locked/Pending'}`}
+                          >
+                            R3: {c.interviewEvals?.round3.score !== null ? `${c.interviewEvals.round3.score}/10` : '🔒'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-extrabold text-blue-700 tabular-nums text-[11px]">
+                            {c.interviewEvals?.totalScore || 0} / 30 pts
+                          </span>
+                          {onEvaluateInterview && (
+                            <button
+                              type="button"
+                              onClick={() => onEvaluateInterview(c)}
+                              className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            >
+                              {c.interviewEvals?.round1.completed ? 'Scorecard →' : 'Evaluate →'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
                     {/* Status Dropdown */}
                     <td className="px-4 py-3.5">
                       <select
@@ -387,6 +503,17 @@ export default function CandidatesTable({
                           >
                             <Mail className="w-3.5 h-3.5" />
                             <span>Email</span>
+                          </button>
+                        )}
+                        {onEvaluateInterview && (
+                          <button
+                            type="button"
+                            onClick={() => onEvaluateInterview(c)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition-colors cursor-pointer border border-amber-200 shadow-2xs"
+                            title="Open 3-Round Scorecard"
+                          >
+                            <Award className="w-3.5 h-3.5" />
+                            <span>Scorecard</span>
                           </button>
                         )}
                         <button

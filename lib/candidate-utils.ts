@@ -1,3 +1,9 @@
+import {
+  CandidateInterviewState,
+  parseInterviewEvaluations,
+  serializeInterviewEvaluations,
+} from './interview-types';
+
 export interface CandidateItem {
   id: string;
   refId: string;
@@ -23,6 +29,7 @@ export interface CandidateItem {
   emailSentAt: string | null;
   lastEmailType: 'confirmation' | 'interview' | 'rejected' | null;
   interviewScheduledAt?: string | null;
+  interviewEvals: CandidateInterviewState;
 }
 
 /**
@@ -89,6 +96,26 @@ export function checkCandidateSelectionEligibility(candidate: CandidateItem): {
       eligible: false,
       statusBlocked: true,
       reason: 'Candidate is already marked as Selected / Hired.',
+    };
+  }
+
+  // ─── MANDATORY 3-ROUND INTERVIEW LIFECYCLE CHECK ─────────────────────────
+  const evals = candidate.interviewEvals;
+  if (!evals || !evals.allRoundsCleared) {
+    const r1Desc = evals?.round1.completed
+      ? (evals.round1.status === 'passed' ? `✅ Passed (${evals.round1.score}/10)` : `❌ ${evals.round1.status.toUpperCase()}`)
+      : '⏳ Pending';
+    const r2Desc = evals?.round2.completed
+      ? (evals.round2.status === 'passed' ? `✅ Passed (${evals.round2.score}/10)` : `❌ ${evals.round2.status.toUpperCase()}`)
+      : '🔒 Locked / Pending';
+    const r3Desc = evals?.round3.completed
+      ? (evals.round3.status === 'passed' ? `✅ Passed (${evals.round3.score}/10)` : `❌ ${evals.round3.status.toUpperCase()}`)
+      : '🔒 Locked / Pending';
+
+    return {
+      eligible: false,
+      statusBlocked: true,
+      reason: `All 3 interview rounds are strictly mandatory. Candidate cannot be selected until Round 1 (General), Round 2 (HR), and Round 3 (Manager) are all completed and passed.\n\nCurrent Interview Lifecycle:\n• Round 1 (General): ${r1Desc}\n• Round 2 (HR): ${r2Desc}\n• Round 3 (Manager): ${r3Desc}\n\nTotal Score: ${evals?.totalScore || 0} / 30`,
     };
   }
 
@@ -184,6 +211,9 @@ export function parseCandidateLead(lead: any): CandidateItem {
     interviewScheduledAt = lead.updated_at;
   }
 
+  // Parse structured 3-round interview evaluation state
+  const interviewEvals = parseInterviewEvaluations(internalNotes);
+
   return {
     id: lead.id,
     refId,
@@ -209,6 +239,7 @@ export function parseCandidateLead(lead: any): CandidateItem {
     emailSentAt,
     lastEmailType,
     interviewScheduledAt,
+    interviewEvals,
   };
 }
 

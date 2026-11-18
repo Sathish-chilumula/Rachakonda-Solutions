@@ -41,7 +41,12 @@ import {
   checkCandidateSelectionEligibility,
   recordInterviewScheduledTag,
 } from '@/lib/candidate-utils';
+import {
+  CandidateInterviewState,
+  serializeInterviewEvaluations,
+} from '@/lib/interview-types';
 import CandidatesTable from '@/components/crm/CandidatesTable';
+import InterviewScorecardModal from '@/components/crm/InterviewScorecardModal';
 import Link from 'next/link';
 import { useCRM } from '../context';
 
@@ -55,6 +60,8 @@ export default function CandidatesAdminPage() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeModalCandidate, setActiveModalCandidate] = useState<CandidateItem | null>(null);
+  const [activeScorecardCandidate, setActiveScorecardCandidate] = useState<CandidateItem | null>(null);
+  const [roundFilter, setRoundFilter] = useState<'all' | 'r1' | 'r2' | 'r3' | 'cleared' | 'interview_rejected'>('all');
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState<string>('');
   const [savingNote, setSavingNote] = useState<boolean>(false);
@@ -344,6 +351,104 @@ export default function CandidatesAdminPage() {
     }
   };
 
+  // Save Structured 3-Round Interview Evaluation
+  const handleSaveEvaluation = async (
+    candidateId: string,
+    updatedState: CandidateInterviewState
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const candidateObj = candidates.find((c) => c.id === candidateId);
+      if (!candidateObj) return { success: false, error: 'Candidate record not found.' };
+
+      const updatedNotes = serializeInterviewEvaluations(candidateObj.internalNotes, updatedState);
+      const nowIso = new Date().toISOString();
+
+      let newLeadStatus = candidateObj.status;
+      if (updatedState.isHaltRejected) {
+        newLeadStatus = 'rejected';
+      } else if (
+        candidateObj.status === 'new' &&
+        (updatedState.round1.completed || updatedState.round2.completed || updatedState.round3.completed)
+      ) {
+        newLeadStatus = 'contacted';
+      }
+
+      // Update Supabase lead record
+      const { error: leadErr } = await supabase
+        .from('leads')
+        .update({
+          internal_notes: updatedNotes,
+          status: newLeadStatus,
+          updated_at: nowIso,
+        })
+        .eq('id', candidateId);
+
+      if (leadErr) {
+        return { success: false, error: leadErr.message };
+      }
+
+      // Write audit log entry
+      try {
+        await supabase.from('audit_logs').insert({
+          action: 'interview_round_evaluated',
+          entity_type: 'candidate',
+          entity_id: candidateId,
+          details: {
+            candidateName: candidateObj.name,
+            refId: candidateObj.refId,
+            currentRound: updatedState.currentRound,
+            totalScore: updatedState.totalScore,
+            compositeVerdict: updatedState.compositeVerdict,
+            round1: updatedState.round1,
+            round2: updatedState.round2,
+            round3: updatedState.round3,
+            evaluatedBy: profile?.email || 'CRM User',
+          },
+        });
+      } catch (logErr) {
+        console.warn('Audit log write skipped:', logErr);
+      }
+
+      // Update local state reactively
+      setCandidates((prev) =>
+        prev.map((c) => {
+          if (c.id === candidateId) {
+            let statusLabel = c.statusLabel;
+            if (newLeadStatus === 'rejected') statusLabel = 'Rejected';
+            else if (newLeadStatus === 'contacted') statusLabel = 'Interview Scheduled';
+
+            return {
+              ...c,
+              internalNotes: updatedNotes,
+              status: newLeadStatus,
+              statusLabel,
+              interviewEvals: updatedState,
+            };
+          }
+          return c;
+        })
+      );
+
+      if (activeModalCandidate?.id === candidateId) {
+        setActiveModalCandidate((prev) =>
+          prev
+            ? {
+                ...prev,
+                internalNotes: updatedNotes,
+                status: newLeadStatus,
+                interviewEvals: updatedState,
+              }
+            : null
+        );
+      }
+
+      showToast(`Evaluation saved for ${candidateObj.name} (${updatedState.totalScore}/30 pts)!`);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to save evaluation.' };
+    }
+  };
+
   // Safe Delete Handlers with confirmation
   const handleConfirmDeleteSingle = async () => {
     if (!candidateToDelete) return;
@@ -448,9 +553,17 @@ export default function CandidatesAdminPage() {
         (emailFilter === 'sent' && item.emailStatus === 'sent') ||
         (emailFilter === 'unsent' && item.emailStatus === 'unsent');
 
-      return matchesStatus && matchesRole && matchesSearch && matchesEmail;
+      const matchesRound =
+        roundFilter === 'all' ||
+        (roundFilter === 'r1' && (!item.interviewEvals?.round1.completed || item.interviewEvals.round1.status === 'pending')) ||
+        (roundFilter === 'r2' && item.interviewEvals?.round1.completed && item.interviewEvals.round1.status === 'passed' && (!item.interviewEvals?.round2.completed || item.interviewEvals.round2.status === 'pending')) ||
+        (roundFilter === 'r3' && item.interviewEvals?.round2.completed && item.interviewEvals.round2.status === 'passed' && (!item.interviewEvals?.round3.completed || item.interviewEvals.round3.status === 'pending')) ||
+        (roundFilter === 'cleared' && item.interviewEvals?.allRoundsCleared) ||
+        (roundFilter === 'interview_rejected' && item.interviewEvals?.isHaltRejected);
+
+      return matchesStatus && matchesRole && matchesSearch && matchesEmail && matchesRound;
     });
-  }, [candidates, statusFilter, roleFilter, search, emailFilter]);
+  }, [candidates, statusFilter, roleFilter, search, emailFilter, roundFilter]);
 
   // Counts for KPI
   const stats = useMemo(() => {
@@ -461,7 +574,11 @@ export default function CandidatesAdminPage() {
     const newApps = candidates.filter((c) => c.status === 'new').length;
     const emailSent = candidates.filter((c) => c.emailStatus === 'sent').length;
     const emailUnsent = candidates.filter((c) => c.emailStatus === 'unsent').length;
-    return { total, selected, rejected, interviewed, newApps, emailSent, emailUnsent };
+    const r1Pending = candidates.filter((c) => !c.interviewEvals?.round1.completed).length;
+    const r2Active = candidates.filter((c) => c.interviewEvals?.round1.completed && c.interviewEvals.round1.status === 'passed' && !c.interviewEvals?.round2.completed).length;
+    const r3Active = candidates.filter((c) => c.interviewEvals?.round2.completed && c.interviewEvals.round2.status === 'passed' && !c.interviewEvals?.round3.completed).length;
+    const allCleared = candidates.filter((c) => c.interviewEvals?.allRoundsCleared).length;
+    return { total, selected, rejected, interviewed, newApps, emailSent, emailUnsent, r1Pending, r2Active, r3Active, allCleared };
   }, [candidates]);
 
   const handleExportAll = () => {
@@ -805,6 +922,43 @@ export default function CandidatesAdminPage() {
           ))}
         </div>
 
+        {/* 3-Round Interview Lifecycle Sub-Filter */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-1 border-t border-slate-100">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 shrink-0 mr-1 flex items-center gap-1">
+            <Award className="w-3.5 h-3.5 text-amber-500" /> Interview Stage:
+          </span>
+          {[
+            { id: 'all', label: 'All Stages' },
+            { id: 'r1', label: '1. General Round Pending', count: stats.r1Pending },
+            { id: 'r2', label: '2. In HR Round', count: stats.r2Active },
+            { id: 'r3', label: '3. In Manager Round', count: stats.r3Active },
+            { id: 'cleared', label: '✓ All 3 Rounds Cleared', count: stats.allCleared },
+            { id: 'interview_rejected', label: '❌ Rejected in Interview' },
+          ].map((rTab) => (
+            <button
+              key={rTab.id}
+              type="button"
+              onClick={() => setRoundFilter(rTab.id as any)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 border ${
+                roundFilter === rTab.id
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <span>{rTab.label}</span>
+              {rTab.count !== undefined && (
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded font-black ${
+                    roundFilter === rTab.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  {rTab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* Search, Role & Email Filter Bar */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2">
           {/* Search Box */}
@@ -925,6 +1079,7 @@ export default function CandidatesAdminPage() {
               setEmailModalCandidate(c);
               setEmailTypeToDispatch(c.status === 'contacted' ? 'interview' : c.status === 'rejected' ? 'rejected' : 'confirmation');
             }}
+            onEvaluateInterview={(c) => setActiveScorecardCandidate(c)}
           />
         )}
 
@@ -1208,6 +1363,17 @@ export default function CandidatesAdminPage() {
               {/* Modal Footer */}
               <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cand = activeModalCandidate;
+                      setActiveModalCandidate(null);
+                      setActiveScorecardCandidate(cand);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Award className="w-3.5 h-3.5" /> 3-Round Scorecard
+                  </button>
                   <button
                     type="button"
                     onClick={() => window.print()}
@@ -1669,6 +1835,18 @@ export default function CandidatesAdminPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ─── Enterprise 3-Round Interview Evaluation Modal ─── */}
+      <InterviewScorecardModal
+        isOpen={Boolean(activeScorecardCandidate)}
+        onClose={() => setActiveScorecardCandidate(null)}
+        candidate={activeScorecardCandidate}
+        currentUser={{
+          name: profile?.name || 'CRM Evaluator',
+          role: profile?.role || 'Interviewer',
+        }}
+        onSaveEvaluation={handleSaveEvaluation}
+      />
     </div>
   );
 }
